@@ -47,6 +47,7 @@ class UsuarioController extends Controller
                 'dni' => $request->dni,
                 'rol_id' => $request->rol_id,
                 'domain_id' => $request->domain_id,
+                'password' => Hash::make($request->password),
             ]);
             return response()->json(['status'=>true]);
         }
