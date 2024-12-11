@@ -29,6 +29,27 @@ class UsuarioController extends Controller
             'rol_id' => 'required|integer',
             'domain_id' => 'required|integer',
         ]);
+        //if id is not null, then it is an update
+        if($request->id){
+            $user=DB::table('users')->where('id',$request->id)->first();
+            if(!$user){
+                return response()->json(['message' => 'Usuario no encontrado'], 404);
+            }
+            if($user->email!=$request->email){
+                $isValidEmail=$this->checkIsValidEmail($request->input('email'));
+                if(!$isValidEmail){
+                    return response()->json(['message' => 'Email en uso'], 400);
+                }
+            }
+            DB::table('users')->where('id',$request->id)->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'dni' => $request->dni,
+                'rol_id' => $request->rol_id,
+                'domain_id' => $request->domain_id,
+            ]);
+            return response()->json(['status'=>true]);
+        }
         $isValidEmail=$this->checkIsValidEmail($request->input('email'));
         if(!$isValidEmail){
             return response()->json(['message' => 'Email en uso'], 400);
@@ -88,5 +109,12 @@ class UsuarioController extends Controller
         //set foreign key check to 1
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         return response()->json(['status'=>true]);
+    }
+    public function getUser($id){
+        $user=DB::table('users')->where('users.id',$id)->join('rol','users.rol_id','=','rol.id')->first();
+        if(!$user){
+            return response()->json(['status'=>false,'message'=>'Usuario no encontrado'],404);
+        }
+        return json_encode($user);
     }
 }
