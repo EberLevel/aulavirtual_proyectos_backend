@@ -153,6 +153,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('unidades/all', 'CursoController@getAllCursos');
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}', 'CursoController@getCursosByPlanEstudioYCarrera');
 
+    $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}/{alumnoId}', 'CursoController@getCursosByPlanEstudioYCarrera');
+
 
     $router->get('roles/{domain_id}', 'RolController@index');
     $router->post('rol/guardar', 'RolController@store');

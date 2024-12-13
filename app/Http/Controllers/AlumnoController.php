@@ -73,11 +73,16 @@ class AlumnoController extends Controller
             if (!$promocion) {
                 return response()->json(['message' => 'Promoción no encontrada'], 400);
             }
-
+            //validar que el email no exista
+            $email = $request->input('email');
+            $emailExist = DB::table('users')->where('email', $email)->first();
+            if ($emailExist) {
+                return response()->json(['message' => 'El email ya existe'], 400);
+            }
             // Procesar imágenes en base64 si están presentes
             $fotoPerfil = $request->input('fotoPerfil');
             $fotoCarnet = $request->input('fotoCarnet');
-
+            
             // Crear el alumno
             $alumno = [
                 "codigo" => $request->input('codigo'),
@@ -117,8 +122,9 @@ class AlumnoController extends Controller
             // Obtener cursos de la carrera seleccionada
             $carreraId = $request->input('carreraId');
             $domainId = $request->input('domain_id');
-
-            $cursos = DB::table('cursos')->where('carrera_id', $carreraId)->get();
+            $estadoId = $request->input('estadoId');
+            $cursos = DB::table('cursos')->where('carrera_id', $carreraId)->
+            where('estado_id', $estadoId)->get();
 
             // Insertar los cursos en la tabla `curso_alumno`
             foreach ($cursos as $curso) {

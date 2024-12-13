@@ -82,8 +82,32 @@ class CursoController extends Controller
         return response()->json($courses);
     }
 
-    public function getCursosByPlanEstudioYCarrera($planEstudioId, $carreraId)
+    public function getCursosByPlanEstudioYCarrera($planEstudioId, $carreraId,$alumnoId=null)
     {
+        if($alumnoId){
+            //select all curso_alumno where alumno_id = $alumnoId
+            return DB::table('curso_alumno')
+                ->leftJoin('cursos', 'curso_alumno.curso_id', '=', 'cursos.id')
+                ->leftJoin('carreras', 'cursos.carrera_id', '=', 'carreras.id')
+                ->leftJoin('plan_de_estudios', 'cursos.estado_id', '=', 'plan_de_estudios.id')
+                ->leftJoin('ciclos', 'cursos.ciclo_id', '=', 'ciclos.id')
+                ->leftJoin('area_de_formacion', 'cursos.area_de_formacion_id', '=', 'area_de_formacion.id')
+                ->leftJoin('modulos_formativos', 'cursos.modulo_formativo_id', '=', 'modulos_formativos.id')
+                ->select(
+                    'cursos.*',
+                    'carreras.nombres as carrera_nombre',
+                    'plan_de_estudios.nombre as plan_de_estudio_nombre',
+                    'ciclos.nombre as ciclo_nombre', // Nombre del ciclo
+                    'area_de_formacion.nombre as area_formacion_nombre', // Nombre del área de formación
+                    'modulos_formativos.nombre as modulo_formativo_nombre' // Nombre del módulo formativo
+                )
+                ->where('curso_alumno.alumno_id', $alumnoId)
+                ->where('cursos.estado_id', $planEstudioId)
+                ->where('cursos.carrera_id', $carreraId)
+                ->where('curso_alumno.estado_id', 2)
+                ->get();
+        }
+
         return DB::table('cursos')
             ->join('carreras', 'cursos.carrera_id', '=', 'carreras.id')
             ->join('plan_de_estudios', 'cursos.estado_id', '=', 'plan_de_estudios.id')
