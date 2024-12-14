@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Curso;
 use App\Models\Alumno;
 use App\Models\CursoAlumno;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class CursoAlumnoController extends Controller
@@ -41,7 +42,33 @@ class CursoAlumnoController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    public function indexByPlan($alumnoId){
+        $cursos = DB::table('cursos')
+        ->join('alumnos', 'alumnos.estado_id', '=', 'cursos.estado_id')
+    ->join('curso_alumno', 'curso_alumno.curso_id', '=', 'cursos.id')
+    ->join('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
+    ->join('ciclos', 'ciclos.id', '=', 'cursos.ciclo_id')
+    ->join('modulos_formativos', 'modulos_formativos.id', '=', 'cursos.modulo_formativo_id')
+    ->join('area_de_formacion', 'area_de_formacion.id', '=', 'cursos.area_de_formacion_id')
+    ->join('carreras', 'carreras.id', '=', 'cursos.carrera_id') 
+    ->join('estados', 'estados.id', '=', 'cursos.estado_id')
+    ->where('curso_alumno.alumno_id', $alumnoId)
+    ->where('alumnos.id', $alumnoId)
+    ->where('alumnos.estadoAlumno', '!=', 'RETIRADO')
+    ->select(
+        'cursos.*',
+        'ciclos.nombre as ciclo_nombre',  // Obtiene el nombre del ciclo
+        'area_de_formacion.nombre as area_de_formacion_nombre',  // Obtiene el nombre del área de formación
+        'modulos_formativos.nombre as modulo_formativo_nombre',  // Obtiene el nombre del módulo formativo
+        'carreras.nombres as carrera_nombre',
+        'estados.nombre as estado_nombre',  // Obtiene el nombre del estado
+        'alumnos.id as alumno_id',
+        'curso_alumno.estado_id as estado_id'
+    )    ->get();
+    return $cursos;
 
+
+    }
     public function indexByAlumno($alumno_id)
     {
         try {
