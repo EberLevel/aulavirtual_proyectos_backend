@@ -98,4 +98,13 @@ class ModalidadPuestoController extends Controller
 
         return response()->json(['message' => 'Modalidad de puesto eliminado correctamente'], 204);
     }
+    public function getDropdown()
+    {
+        $domain_id = request()->query(key: 'domain_id') ?? null;
+        $modalidadPuesto = ModalidadPuesto::when($domain_id, function ($query, $domain_id) {
+            return $query->where('domain_id', $domain_id);
+        })->select('id', 'nombre')->get();
+
+        return response()->json($modalidadPuesto, 200);
+    }
 }

@@ -17,6 +17,7 @@ class Institucion extends Model
         'direccion',
         'telefono',
         'domain_id',
+        "institucionPadre"
     ];
 
     public function domain()

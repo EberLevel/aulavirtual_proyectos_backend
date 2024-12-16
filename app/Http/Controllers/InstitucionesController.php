@@ -2,16 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CvBank\CvBank;
 use Illuminate\Http\Request;
 use App\Models\Institucion; // Asegúrate de crear el modelo correspondiente
 use Illuminate\Support\Facades\Validator;
-
+    
 class InstitucionesController extends Controller
 {
     // Obtener todas las instituciones
     public function index()
     {
-        $instituciones = Institucion::all();
+        $domain_id = request()->query('domain_id')??null;
+        $institucion_id= request()->query('institucion_id')??null;
+        
+        $instituciones = Institucion::when($domain_id, function ($query, $domain_id) {
+            return $query->where('domain_id', $domain_id);
+        })->when($institucion_id, function ($query, $institucion_id) {
+            return $query->where('institucionPadre', $institucion_id);
+        })->get();
         return response()->json($instituciones);
     }
 
@@ -101,5 +109,14 @@ class InstitucionesController extends Controller
 
         $institucion->delete();
         return response()->json(['message' => 'Institución eliminada']);
+    }
+    public function getCv(){
+        $document_number = request()->query('document_number')??null;
+        $domain_id = request()->query('domain_id')??null;
+        return CvBank::when($document_number, function ($query, $document_number) {
+            return $query->where('identification_number', $document_number);
+        })->when($domain_id, function ($query, $domain_id) {
+            return $query->where('domain_id', $domain_id);
+        })->get();
     }
 }

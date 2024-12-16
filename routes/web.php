@@ -88,13 +88,22 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
 
 
     $router->get('instituciones', 'InstitucionesController@index');
+    $router->get('instituciones/areas', 'InstitucionAreaController@index');
+    $router->post('instituciones/areas', 'InstitucionAreaController@store');
+    $router->delete('instituciones/areas/{id}', 'InstitucionAreaController@destroy');
+    $router->get('instituciones/puestos', 'InstitucionesPuestoController@index');
+    $router->post('instituciones/puestos', 'InstitucionesPuestoController@store');
+    $router->delete('instituciones/puestos/{id}', 'InstitucionesPuestoController@destroy');
+    $router->get('instituciones/puestos/perfiles', 'InstitucionesPerfilController@index');
+    $router->post('instituciones/puestos/perfiles', 'InstitucionesPerfilController@store');
+    $router->delete('instituciones/puestos/perfiles/{id}', 'InstitucionesPerfilController@destroy');
     $router->get('instituciones/{id}', 'InstitucionesController@show');
     $router->post('instituciones', 'InstitucionesController@store');
     $router->put('instituciones/{id}', 'InstitucionesController@update');
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');
-
-    $router->get('institutions-dropdown', 'InstitucioneController@dropdown');
-
+    $router->get('cv', 'InstitucionesController@getCv');
+    $router->get('institutions-dropdown', 'InstitucionesController@dropdown');
+    //institution areas
 
     //get carreras dropdown
     $router->get('carreras/{id}', 'CarreraController@show');
@@ -271,7 +280,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('modalidad-puesto/{id}', 'ModalidadPuestoController@show');
     $router->put('modalidad-puesto/{id}', 'ModalidadPuestoController@update');
     $router->delete('modalidad-puesto/{id}', 'ModalidadPuestoController@destroy');
-
+    $router->get('modalidad-puesto-dropdown', 'ModalidadPuestoController@getDropdown');
     //Profesiones
     $router->get('profesiones/{domain_id}', 'ProfesionController@index');
     $router->post('profesion', 'ProfesionController@store');
@@ -285,7 +294,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('estado-avance/{id}', 'EstadoAvanceController@show');
     $router->put('estado-avance/{id}', 'EstadoAvanceController@update');
     $router->delete('estado-avance/{id}', 'EstadoAvanceController@destroy');
-
+    $router->get('estado-actual-dropdown', 'EstadoActualController@getEstadoActualDropdown');
     //Escala
     $router->get('escalas/{domain_id}', 'EscalaController@index');
     $router->post('escala', 'EscalaController@store');

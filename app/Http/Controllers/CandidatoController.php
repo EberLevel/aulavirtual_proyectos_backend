@@ -51,7 +51,7 @@ class CandidatoController extends Controller
         $data = [
             'code' => $code,
             'identification_documents' => \App\Models\DocIdentidad::where('domain_id', $domain_id)->get(),
-            'marital_statuses' => \App\Models\EstadoCivil::where('domain_id', $domain_id)->get(),
+            'marital_statuses' => \App\Models\EstadoCivil::all(),
             'education_degrees' => \App\Models\GradoInstruccion::where('domain_id', $domain_id)->get(),
             'professions' => \App\Models\Profesion::where('domain_id', $domain_id)->get(),
             'current_states' => \App\Models\EstadoActual::where('domain_id', $domain_id)->get(),

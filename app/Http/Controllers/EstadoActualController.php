@@ -101,4 +101,10 @@ class EstadoActualController extends Controller
 
         return response()->json(['message' => 'Estado eliminado correctamente'], 204);
     }
+    public function getEstadoActualDropdown()
+    {   
+        $domain_id = request()->query(key: 'domain_id') ?? null;
+        $estados=EstadoActual::select('id', 'nombre')->get();
+        return response()->json($estados, 200);
+    }
 }
