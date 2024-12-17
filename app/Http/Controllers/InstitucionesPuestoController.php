@@ -14,7 +14,9 @@ class InstitucionesPuestoController extends Controller
             $area_id = request()->query('area_id')??null;
             return  DB::table('area_puestos')->when($area_id, function ($query, $area_id) {
                 return $query->where('area_id', $area_id);
-            })->get();
+            })->leftJoin('estado_actual', 'area_puestos.estado', '=', 'estado_actual.id')
+            ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
+            select('area_puestos.*', 'estado_actual.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion')->get();
     }
     public function store(Request $request)
     {
@@ -49,13 +51,14 @@ class InstitucionesPuestoController extends Controller
         // Inicia la transacción
         DB::beginTransaction();
         try{
-            $perfiles=DB::table('puesto_perfiles')->where('puesto_id', $id)->get();
-            foreach($perfiles as $perfil){
-                DB::table('puesto_perfiles')->where('id', $perfil->id)->delete();
-            }
-            DB::table('area_puestos')->where('id', $id)->delete();
+            DB::table('area_puestos')->where('id', $id)->
+            update(['codigo' =>null, 'nombre' =>null, 'telefono' =>null, 'email' =>null, 
+        'formacion' =>null, 'capacitacion' =>null, 'experiencia_especifica' =>null, 'experiencia_general' =>null,
+    'fecha_nombramiento' =>null, 'nombre_nombrado' =>null, 'estado' =>null, 'modalidad_posicion' =>null,
+            'sueldo_promedio' =>null, 'nivel' =>null, 'dependencia' =>null, 'nivel_perfil' =>null, 
+]);
             DB::commit();
-        }catch(\Exception $e){
+    }catch(\Exception $e){
             // Revierte la transacción
             DB::rollBack();
             return response()->json(['message' => 'Error al eliminar el puesto'
