@@ -6,7 +6,7 @@ use App\Models\CvBank\CvBank;
 use Illuminate\Http\Request;
 use App\Models\Institucion; // Asegúrate de crear el modelo correspondiente
 use Illuminate\Support\Facades\Validator;
-    
+use Illuminate\Support\Facades\DB;
 class InstitucionesController extends Controller
 {
     // Obtener todas las instituciones
@@ -118,5 +118,12 @@ class InstitucionesController extends Controller
         })->when($domain_id, function ($query, $domain_id) {
             return $query->where('domain_id', $domain_id);
         })->get();
+    }
+    public function dropdown(){
+        $domain_id = request()->query('domain_id')??null;
+        $instituciones = DB::table('companies')->when($domain_id, function ($query, $domain_id) {
+            return $query->where('domain_id', $domain_id);
+        })->select('id as value', 'name',"domain_id")->get();
+        return response()->json($instituciones);
     }
 }

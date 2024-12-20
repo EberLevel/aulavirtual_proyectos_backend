@@ -192,7 +192,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('capacitaciones-eliminar/{id}', 'CapacitacionController@destroy');
     $router->get('capacitaciones-codigo', 'CapacitacionController@generateCode');
     $router->get('capacitaciones-docentes', 'CapacitacionController@listarDocentes');
-
+    
     // para pagos
     $router->get('pagos/{domain_id}', 'PagoController@index');
     $router->get('pagos/{domain_id}/{pago_id}/alumnos', 'PagoController@getPaymentByStudent');

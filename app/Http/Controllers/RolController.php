@@ -72,7 +72,7 @@ class RolController extends Controller
     $idRol = $request->get('id');
     $idPermisos = $request->get('idPermisos', null);
     $idDomain =$request['domain_id'];
-
+    
     // Elimina los permisos existentes
     DB::table('rol_permiso')->where('idrol', $idRol)->
     where('domain_id', $idDomain)->
@@ -83,7 +83,7 @@ class RolController extends Controller
         foreach ($idPermisos as $idpermiso) {
             if ($idpermiso['permiso_id'] !== null) {
                  $data[] = ['idrol' => $idRol, 'idpermiso' => $idpermiso['permiso_id'], 'domain_id' => $idDomain, 'proyecto_id' => $idpermiso['proyecto_id']];
-            }
+            }   
         }
             DB::table('rol_permiso')->insert($data);
     }
