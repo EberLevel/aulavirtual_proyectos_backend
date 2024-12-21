@@ -142,7 +142,7 @@ class CvBankController extends Controller
      */
     public function show($id)
     {
-        $cvBank = CvBank::findOrFail($id);
+        $cvBank = CvBank::findOrFail($id)->with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')->first();
         return response()->json(['cvBank' => $cvBank]);
     }
 

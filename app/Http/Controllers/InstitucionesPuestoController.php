@@ -58,12 +58,12 @@ class InstitucionesPuestoController extends Controller
             'sueldo_promedio' =>null, 'nivel' =>null, 'dependencia' =>null, 'nivel_perfil' =>null, 
 ]);
             DB::commit();
-    }catch(\Exception $e){
-            // Revierte la transacción
+    }
+    catch(\Exception $e){
             DB::rollBack();
             return response()->json(['message' => 'Error al eliminar el puesto'
         .$e->getMessage()], 500);
-        }
+        }   
         
 
         return response()->json(null, 204);
