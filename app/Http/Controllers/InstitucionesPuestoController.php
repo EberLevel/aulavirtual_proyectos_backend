@@ -14,9 +14,30 @@ class InstitucionesPuestoController extends Controller
             $area_id = request()->query('area_id')??null;
             return  DB::table('area_puestos')->when($area_id, function ($query, $area_id) {
                 return $query->where('area_id', $area_id);
-            })->leftJoin('estado_actual', 'area_puestos.estado', '=', 'estado_actual.id')
+            })->
+            join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
+            leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
             ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
-            select('area_puestos.*', 'estado_actual.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion')->get();
+            leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
+            leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
+            select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
+            'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area'
+            )->get();
+    }
+    public function getPuestosByDomain(){
+        $domain_id = request()->query('domain_id')??null;
+        $puestos = DB::table('area_puestos')->join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
+        join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
+        leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
+        ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
+        leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
+        leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
+        where('instituciones.domain_id', $domain_id)->
+        select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
+        'institucion_area.nombre as area', 'instituciones.nombre as institucion',
+        'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia'
+        )->get();
+        return response()->json($puestos);
     }
     public function store(Request $request)
     {
@@ -67,5 +88,11 @@ class InstitucionesPuestoController extends Controller
         
 
         return response()->json(null, 204);
+    }
+    public function getLastId(){
+        $puesto = DB::table('area_puestos')->orderBy('id', 'desc')->first();
+        //concat to 6 digits 
+        $id = str_pad($puesto->id + 1, 6, "0", STR_PAD_LEFT);
+        return response()->json($id);
     }
 }

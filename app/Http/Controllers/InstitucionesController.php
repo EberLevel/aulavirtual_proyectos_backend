@@ -14,12 +14,19 @@ class InstitucionesController extends Controller
     {
         $domain_id = request()->query('domain_id')??null;
         $institucion_id= request()->query('institucion_id')??null;
-        
+        $user_id = request()->query('user_id')??null;
         $instituciones = Institucion::when($domain_id, function ($query, $domain_id) {
             return $query->where('domain_id', $domain_id);
         })->when($institucion_id, function ($query, $institucion_id) {
             return $query->where('institucionPadre', $institucion_id);
         })->get();
+        $user_entidades=DB::table('user_entidades')->where('user_id',$user_id)->get();
+        //filter instituciones where id is in $User_entidades institucion_id array
+        if($user_id){
+        $instituciones=$instituciones->filter(function($institucion) use ($user_entidades){
+            return $user_entidades->contains('institucion_id',$institucion->id);
+        });}
+        
         return response()->json($instituciones);
     }
 
@@ -125,5 +132,11 @@ class InstitucionesController extends Controller
             return $query->where('domain_id', $domain_id);
         })->select('id as value', 'name',"domain_id")->get();
         return response()->json($instituciones);
+    }
+    public function getPermanenciaDropdown(){
+        return DB::table('puesto_permanencia')->get();
+    }
+    public function getContinuidadDropdown(){
+        return DB::table('puesto_continuidad')->get();
     }
 }

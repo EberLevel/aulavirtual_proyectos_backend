@@ -29,8 +29,10 @@ class UsuarioController extends Controller
             'rol_id' => 'required|integer',
             'domain_id' => 'required|integer',
         ]);
-        //if id is not null, then it is an update
-        if($request->id){
+        DB::beginTransaction();
+       try{
+         //if id is not null, then it is an update
+         if($request->id){
             $user=DB::table('users')->where('id',$request->id)->first();
             if(!$user){
                 return response()->json(['message' => 'Usuario no encontrado'], 404);
@@ -49,6 +51,18 @@ class UsuarioController extends Controller
                 'domain_id' => $request->domain_id,
                 'password' => Hash::make($request->password),
             ]);
+            DB::table(table: 'user_entidades')->where('user_id',$request->id)->delete();
+            if($request->entidades){
+                $entidades=json_decode($request->entidades);
+                foreach($entidades as $entidad){
+                    DB::table('user_entidades')->insert([
+                        'user_id' => $request->id,
+                        'institucion_id' => $entidad,
+                    ]);
+                }
+            }
+
+            DB::commit();
             return response()->json(['status'=>true]);
         }
         $isValidEmail=$this->checkIsValidEmail($request->input('email'));
@@ -76,7 +90,7 @@ class UsuarioController extends Controller
             ]);
             DB::table('users')->where('email',$request->email)->update(['alumno_id'=>$alumno_id]);
         }else{
-            DB::table('users')->insert([
+            $user_id=DB::table('users')->insertGetId([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
@@ -84,9 +98,24 @@ class UsuarioController extends Controller
                 'rol_id' => $request->rol_id,
                 'domain_id' => $request->domain_id,
             ]);
+            DB::table(table: 'user_entidades')->where('user_id',$user_id)->delete();
+            if($request->entidades){
+                $entidades=json_decode($request->entidades);
+                foreach($entidades as $entidad){
+                    DB::table('user_entidades')->insert([
+                        'user_id' => $user_id,
+                        'institucion_id' => $entidad,
+                    ]);
+                }
+            }
         }
-
+        DB::commit();
         return response()->json(['status'=>true]);
+       }
+       catch(\Exception $e){
+              DB::rollBack();
+           return response()->json(['message' => $e->getMessage()], 400);
+       }
 
     }
     public function destroy($id){
@@ -117,5 +146,12 @@ class UsuarioController extends Controller
             return response()->json(['status'=>false,'message'=>'Usuario no encontrado'],404);
         }
         return json_encode($user);
+    }
+    public function getEntidades($id){
+        $entidades=DB::table('user_entidades')->
+        join('instituciones','user_entidades.institucion_id','=','instituciones.id')->
+        select('instituciones.id','instituciones.nombre')->
+        where('user_id',$id)->get();
+        return json_encode($entidades);
     }
 }

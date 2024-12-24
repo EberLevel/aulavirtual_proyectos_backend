@@ -22,7 +22,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     });
     $router->get('usuarios/{domain_id}', 'UsuarioController@index');
     $router->get('usuario/{id}', 'UsuarioController@getUser');
-
+    $router->get('usuarios/entidades/{id}', 'UsuarioController@getEntidades');    
     $router->post('usuarios', 'UsuarioController@store');
     $router->delete('usuarios/{id}', 'UsuarioController@destroy');
     $router->post('login', 'LoginController@login');
@@ -88,11 +88,14 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
 
 
     $router->get('instituciones', 'InstitucionesController@index');
+    $router->get('instituciones/reporte-puestos', 'InstitucionesPuestoController@getPuestosByDomain');
     $router->get('instituciones/areas', 'InstitucionAreaController@index');
+    $router->get('instituciones/areas/{id}', 'InstitucionAreaController@getByAreaId');
     $router->post('instituciones/areas', 'InstitucionAreaController@store');
     $router->delete('instituciones/areas/{id}', 'InstitucionAreaController@destroy');
     $router->get('instituciones/puestos', 'InstitucionesPuestoController@index');
     $router->post('instituciones/puestos', 'InstitucionesPuestoController@store');
+    $router->get('instituciones/puestos/get-last-id', 'InstitucionesPuestoController@getLastId');
     $router->delete('instituciones/puestos/{id}', 'InstitucionesPuestoController@destroy');
     $router->get('instituciones/puestos/perfiles', 'InstitucionesPerfilController@index');
     $router->post('instituciones/puestos/perfiles', 'InstitucionesPerfilController@store');
@@ -103,6 +106,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');
     $router->get('cv', 'InstitucionesController@getCv');
     $router->get('institutions-dropdown', 'InstitucionesController@dropdown');
+    $router->get('permanencia-dropdown', 'InstitucionesController@getPermanenciaDropdown');
+    $router->get('continuidad-dropdown', 'InstitucionesController@getContinuidadDropdown');
     //institution areas
 
     //get carreras dropdown
