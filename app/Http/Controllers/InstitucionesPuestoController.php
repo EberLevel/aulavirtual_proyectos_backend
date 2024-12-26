@@ -16,12 +16,14 @@ class InstitucionesPuestoController extends Controller
                 return $query->where('area_id', $area_id);
             })->
             join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
+            join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
             leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
             ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
             leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
             leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
             select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
-            'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area'
+            'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area',
+            'instituciones.siglas as institucion_siglas'
             )->get();
     }
     public function getPuestosByDomain(){
@@ -33,7 +35,10 @@ class InstitucionesPuestoController extends Controller
         leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
         leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
         where('instituciones.domain_id', $domain_id)->
-        select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
+        select('area_puestos.*',
+        'instituciones.siglas as institucion_siglas',
+         'puestos_estado.nombre as estado',
+         'modalidad_puesto.nombre as modalidad_posicion',
         'institucion_area.nombre as area', 'instituciones.nombre as institucion',
         'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia'
         )->get();
@@ -48,7 +53,6 @@ class InstitucionesPuestoController extends Controller
             'codigo' => 'required|string|max:191',
             'nombre' => 'required|string|max:191',
             'telefono' => 'required|string|max:15',
-            'email' => 'required|string|max:191',
             'salario_minimo' => 'required|numeric',
             'salario_maximo' => 'required|numeric',
             'diferencia' => 'required|numeric'
