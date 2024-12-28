@@ -24,7 +24,8 @@ class InstitucionesPuestoController extends Controller
             select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
             'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area',
             'instituciones.siglas as institucion_siglas'
-            )->get();
+            )->orderByRaw('COALESCE(area_puestos.orden, 9999999) ASC')->
+            get();
     }
     public function getPuestosByDomain(){
         $domain_id = request()->query('domain_id')??null;
@@ -41,7 +42,9 @@ class InstitucionesPuestoController extends Controller
          'modalidad_puesto.nombre as modalidad_posicion',
         'institucion_area.nombre as area', 'instituciones.nombre as institucion',
         'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia'
-        )->get();
+        )
+        ->orderByRaw('COALESCE(area_puestos.orden, 9999999) ASC')->
+        get();
         return response()->json($puestos);
     }
     public function store(Request $request)
@@ -55,7 +58,8 @@ class InstitucionesPuestoController extends Controller
             'telefono' => 'required|string|max:15',
             'salario_minimo' => 'required|numeric',
             'salario_maximo' => 'required|numeric',
-            'diferencia' => 'required|numeric'
+            'diferencia' => 'required|numeric',
+            'orden' => 'regex:/^[0-9]+(\.[0-9]+)*$/'
         ];
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {

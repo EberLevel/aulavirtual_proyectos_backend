@@ -24,4 +24,12 @@ class Institucion extends Model
     {
         return $this->belongsTo(Domains::class, 'domain_id');
     }
+    public function subInstituciones()
+    {
+        return $this->hasMany(Institucion::class, 'institucionPadre', 'id');
+    }
+    public function institucionPadre()
+    {
+        return $this->belongsTo(Institucion::class, 'institucionPadre');
+    }
 }

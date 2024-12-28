@@ -17,9 +17,10 @@ class InstitucionesController extends Controller
         $user_id = request()->query('user_id')??null;
         $instituciones = Institucion::when($domain_id, function ($query, $domain_id) {
             return $query->where('domain_id', $domain_id);
-        })->when($institucion_id, function ($query, $institucion_id) {
+        })->when(
+            $institucion_id, function ($query, $institucion_id) {
             return $query->where('institucionPadre', $institucion_id);
-        })->get();
+        })->get();          
         $user_entidades=DB::table('user_entidades')->where('user_id',$user_id)->get();
         //filter instituciones where id is in $User_entidades institucion_id array
         if($user_id){
@@ -27,7 +28,7 @@ class InstitucionesController extends Controller
             return $user_entidades->contains('institucion_id',$institucion->id);
         });}
         
-        return response()->json($instituciones);
+        return response()->json($instituciones->values());
     }
 
     // Obtener una institución por ID
@@ -49,8 +50,6 @@ class InstitucionesController extends Controller
             'nivel' => 'required|string|max:191',
             'siglas' => 'required|string|max:191',
             'nombre' => 'required|string|max:191',
-            'ubigeo' => 'required|string|max:6',
-            'direccion' => 'required|string|max:255',
             'telefono' => 'required|string|max:15',
             'domain_id' => 'required|exists:domains,id'
         ];
@@ -78,8 +77,6 @@ class InstitucionesController extends Controller
             'nivel' => 'required|string|max:191',
             'siglas' => 'required|string|max:191',
             'nombre' => 'required|string|max:191',
-            'ubigeo' => 'required|string|max:6',
-            'direccion' => 'required|string|max:255',
             'telefono' => 'required|string|max:15',
             'domain_id' => 'required|exists:domains,id'
         ];
@@ -138,5 +135,20 @@ class InstitucionesController extends Controller
     }
     public function getContinuidadDropdown(){
         return DB::table('puesto_continuidad')->get();
+    }
+    //function to get all instituciones by domain_id with n object of subinstituciones
+    public function getInstitucionesByDomain(){
+        $domain_id = request()->query('domain_id')??null;
+        $instituciones = Institucion::query()
+        ->whereNull('institucionPadre')  // Trae solo las instituciones padre
+        ->with(['subInstituciones' => function($query) {
+            $query->orderBy('nombre', 'asc');  // Ordena las subinstituciones
+        }])
+        ->when($domain_id, function ($query, $domain_id) {
+            return $query->where('domain_id', $domain_id);
+        })
+        ->orderBy('nombre', 'asc')
+        ->get();
+        return response()->json($instituciones);
     }
 }

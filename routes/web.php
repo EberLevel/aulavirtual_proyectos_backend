@@ -106,6 +106,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');
     $router->get('cv', 'InstitucionesController@getCv');
     $router->get('institutions-dropdown', 'InstitucionesController@dropdown');
+    $router->get('subinstitutions-dropdown','InstitucionesController@getInstitucionesByDomain');
     $router->get('permanencia-dropdown', 'InstitucionesController@getPermanenciaDropdown');
     $router->get('continuidad-dropdown', 'InstitucionesController@getContinuidadDropdown');
     //institution areas
