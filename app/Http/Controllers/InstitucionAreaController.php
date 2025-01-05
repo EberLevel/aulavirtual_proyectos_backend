@@ -6,9 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 class InstitucionAreaController extends Controller
 {
+    public function getAreas(){
+        return DB::table('institucion_area')->get();
+    }
     public function index(){
         $institucion_id= request()->query('institucion_id')??null;
+        $domain_id = request()->query('domain_id')??null;
         $area_padre_id= request()->query('area_id')??null;
+
         return  DB::table('institucion_area')
         ->when($institucion_id, function ($query, $institucion_id) {
             return $query->where('institucion_id', $institucion_id);

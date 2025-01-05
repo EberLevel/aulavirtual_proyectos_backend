@@ -32,8 +32,9 @@ class InstitucionesController extends Controller
     }
 
     // Obtener una institución por ID
-    public function show($id)
+    public function getInstitucion(Request $request)
     {
+        $id = $request->id;
         $institucion = Institucion::find($id);
         if ($institucion) {
             return response()->json($institucion);

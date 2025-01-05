@@ -88,8 +88,11 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
 
 
     $router->get('instituciones', 'InstitucionesController@index');
+    $router->get('instituciones/{id:[0-9]+}', 'InstitucionesController@show');
+
     $router->get('instituciones/reporte-puestos', 'InstitucionesPuestoController@getPuestosByDomain');
-    $router->get('instituciones/areas', 'InstitucionAreaController@index');
+    $router->get('instituciones/getAreas', 'InstitucionAreaController@index');
+
     $router->get('instituciones/areas/{id}', 'InstitucionAreaController@getByAreaId');
     $router->post('instituciones/areas', 'InstitucionAreaController@store');
     $router->delete('instituciones/areas/{id}', 'InstitucionAreaController@destroy');
@@ -100,7 +103,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('instituciones/puestos/perfiles', 'InstitucionesPerfilController@index');
     $router->post('instituciones/puestos/perfiles', 'InstitucionesPerfilController@store');
     $router->delete('instituciones/puestos/perfiles/{id}', 'InstitucionesPerfilController@destroy');
-    $router->get('instituciones/{id}', 'InstitucionesController@show');
+    $router->post('instituciones/get-institucion', 'InstitucionesController@getInstitucion');
     $router->post('instituciones', 'InstitucionesController@store');
     $router->put('instituciones/{id}', 'InstitucionesController@update');
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');

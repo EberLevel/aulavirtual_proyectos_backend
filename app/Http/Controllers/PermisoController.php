@@ -14,6 +14,9 @@ class PermisoController extends Controller
 {
     public function index($domain_id)
     {
+        /** 
+         * 
+         */
         $data = Permiso::all();
         if($domain_id=="null"){
             return response()->json($data);

@@ -52,14 +52,14 @@ class InstitucionesPuestoController extends Controller
         $id = $request->input('puesto_id');
         $puesto = $request->all();
         $rules = [
-            'area_id' => 'required|exists:institucion_area,id',
+            'area_id' => 'exists:institucion_area,id|sometimes',
             'codigo' => 'required|string|max:191',
             'nombre' => 'required|string|max:191',
-            'telefono' => 'required|string|max:15',
-            'salario_minimo' => 'required|numeric',
-            'salario_maximo' => 'required|numeric',
-            'diferencia' => 'required|numeric',
-            'orden' => 'regex:/^[0-9]+(\.[0-9]+)*$/'
+            'telefono' => 'sometimes|string|max:15',
+            'salario_minimo' => 'sometimes|numeric',
+            'salario_maximo' => 'sometimes|numeric',
+            'diferencia' => 'sometimes|numeric',
+            'orden' => 'sometimes|regex:/^[0-9]+(\.[0-9]+)*$/'
         ];
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
