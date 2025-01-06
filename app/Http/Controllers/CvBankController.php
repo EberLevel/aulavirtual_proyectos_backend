@@ -214,7 +214,13 @@ class CvBankController extends Controller
             'type' => 'user',
             'status' => 'active',
         ];
-        $user->update($data);
+        if($user){
+            $user->update($data);
+        }else{
+            $user = new \App\Models\User($data);
+            $user->save();
+        }
+        
 
         return response()->json(['message' => 'Banco de CV actualizado correctamente', 'data' => $cvBank], 200);
     }
