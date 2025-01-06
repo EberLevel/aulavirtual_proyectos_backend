@@ -213,6 +213,7 @@ class CvBankController extends Controller
             'rol_id' => 21,
             'type' => 'user',
             'status' => 'active',
+            'postulante_id' => $cvBank->id
         ];
         if($user){
             $user->update($data);
