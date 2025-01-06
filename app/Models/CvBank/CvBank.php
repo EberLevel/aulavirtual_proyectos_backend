@@ -23,6 +23,7 @@ class CvBank extends Model
     protected $table = 'cv_banks';
 
     protected $fillable = [
+        'id',
         'user_id',
         'position_code',
         'code',

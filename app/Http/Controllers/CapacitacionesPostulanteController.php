@@ -6,7 +6,7 @@ use App\Models\CapacitacionPostulante;
 use Illuminate\Http\Request;
 use App\Models\Ano;
 use Exception;
-
+use App\Models\Capacitacion;
 class CapacitacionesPostulanteController extends Controller
 {
     // Crear una nueva capacitación
@@ -114,13 +114,8 @@ class CapacitacionesPostulanteController extends Controller
     public function getDataCreate($domain_id)
     {
         try {
-            $estados = Ano::where('domain_id', $domain_id)->get();
-    
-            if ($estados->isEmpty()) {
-                return response()->json(['message' => 'No se encontraron estados para este dominio'], 404);
-            }
-    
-            return response()->json(['estados' => $estados], 200);
+            $capacitaciones = CapacitacionPostulante::where('domain_id', $domain_id)->get();
+            return response()->json(['estados' => $capacitaciones], 200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error al obtener datos: ' . $e->getMessage()], 500);
         }

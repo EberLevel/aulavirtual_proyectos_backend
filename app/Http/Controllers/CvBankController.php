@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CvBank\CvBank;
+use App\Models\CvBank;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Controllers\bcrypt;
-
+use Illuminate\Support\Facades\DB;
 class CvBankController extends Controller
 {
     /**
@@ -93,7 +93,15 @@ class CvBankController extends Controller
             'imagen' => 'nullable|string',
         ]);
     
-        // Crear un nuevo usuario asociado con el postulante
+        $userExist = \App\Models\User::where('email', $request->input('email'))->first();
+        if ($userExist) {
+            return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+        }
+        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->first();
+        if ($userExist) {
+            return response()->json(['message' => 'El DNI ya está en uso'], 400);
+        }
+        
         $user = new \App\Models\User([
             'name' => $request->input('names'),
             'email' => $request->input('email'),
@@ -104,10 +112,11 @@ class CvBankController extends Controller
             'type' => 'user',
             'status' => 'active',
         ]);
-    
-        // Guarda el usuario en la base de datos
+        //find if user exists with same email or dni
+       
         $user->save();
-    
+        //find if exist user with same dni 
+        
         // Ahora crea el registro en la tabla `cv_banks`
         $cvBank = CvBank::create([
             'position_code' => $request->input('position_code'),
@@ -142,13 +151,21 @@ class CvBankController extends Controller
      */
     public function show($id)
     {
-        $cvBank = CvBank::findOrFail($id)->with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')->first();
+        $cvBank = DB::table('cv_banks')->where('cv_banks.id', $id)->
+        leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')->
+        leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')->
+        leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')->
+        leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')->
+        leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')->
+        select('cv_banks.*', 'domains.nombre as domain', 'estado_civil.nombre as marital_status', 'grado_instruccion.nombre as education_degree', 'estado_actual.nombre as estado_actual', 'doc_identidad.nombre as identification_document')->
+        first();
         return response()->json(['cvBank' => $cvBank]);
     }
 
     public function showByUser($id)
     {
         $cvBank = CvBank::where('user_id', $id)->first();
+ 
         return response()->json(['cvBank' => $cvBank]);
     }
 
@@ -175,7 +192,29 @@ class CvBankController extends Controller
         ]);
 
         $cvBank = CvBank::findOrFail($id);
+        //find if exists dni or email in user where user_id is different from the current user
+        $userExist = \App\Models\User::where('email', $request->input('email'))->where('postulante_id', '!=', $cvBank->id)->first();
+        if ($userExist) {
+            return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+        }
+        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->where('postulante_id', '!=', $cvBank->id)->first();
+        if ($userExist) {
+            return response()->json(['message' => 'El DNI ya está en uso'], 400);
+        }
         $cvBank->update($data);
+        //get user_id where cv_bank->user_id
+        $user = \App\Models\User::find($cvBank->user_id);
+        $data=[
+            'name' => $request->input('names'),
+            'email' => $request->input('email'),
+            'dni' => $request->input('identification_number'),
+            'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+            'domain_id' => $request->input('domain_id'),
+            'rol_id' => 21,
+            'type' => 'user',
+            'status' => 'active',
+        ];
+        $user->update($data);
 
         return response()->json(['message' => 'Banco de CV actualizado correctamente', 'data' => $cvBank], 200);
     }

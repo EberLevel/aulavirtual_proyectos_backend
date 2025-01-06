@@ -1,20 +1,23 @@
 <?php
 
-namespace App\Models\CvBank;
+namespace App\Models;
 
 use App\Models\AcademicFormation;
-use App\Models\Capacitation;
+use App\Models\Capacitacion; // Ensure this model exists or correct the namespace if necessary
 use App\Models\DocIdentidad;
 use App\Models\EstadoActual;
 use App\Models\EstadoCivil;
 use App\Models\GradoInstruccion;
 use App\Models\Maintenance\Profession;
+
 use App\Models\Profesion;
 use App\Models\Reference;
 use App\Models\WorkExperience;
 use App\Models\Domains;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+
 
 class CvBank extends Model
 {
@@ -23,6 +26,7 @@ class CvBank extends Model
     protected $table = 'cv_banks';
 
     protected $fillable = [
+        'id',
         'user_id',
         'position_code',
         'code',
@@ -60,7 +64,7 @@ class CvBank extends Model
 
     public function capacitations()
     {
-        return $this->hasMany(Capacitation::class, 'cv_bank_id');
+        return $this->hasMany(Capacitacion::class, 'cv_bank_id');
     }
 
     public function work_experiences()
@@ -86,6 +90,10 @@ class CvBank extends Model
     public function education_degree()
     {
         return $this->belongsTo(GradoInstruccion::class, 'education_degree_id');
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function identification_document()
