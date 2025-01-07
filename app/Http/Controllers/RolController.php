@@ -96,6 +96,10 @@ class RolController extends Controller
         $permisos= Permiso::withRecursiveSelectedForAdmin($id, $domain_id)->get();
         return response()->json($permisos, 200);
     }
+    public function getRolPermisosAdminDominio($id,$domain_id){
+        $permisos= Permiso::withRecursivePermissions(8,$id, $domain_id);
+        return response()->json($permisos, 200);
+    }
     public function getRolPermisos($id, $domain_id)
     {
         $domain_id=="null"?$domain_id=null:$domain_id;

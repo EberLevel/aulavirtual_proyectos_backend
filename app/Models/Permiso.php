@@ -115,4 +115,86 @@ class Permiso extends Model
             return $permiso->subPermisos->isNotEmpty();
         })->values();
     }
+    public function scopeWithRecursivePermissions($query, $rolIdToCompare, $rolId, $domainId)
+{
+    $selectFields = function($query) use ($rolIdToCompare, $rolId, $domainId) {
+        $query = $query->select('permiso.*')
+            ->selectRaw('permiso.id=0 as isExpanded')
+            ->selectRaw('CASE WHEN rol_permiso_compare.idpermiso IS NOT NULL THEN true ELSE false END as has_permission')
+            ->selectRaw(
+                is_null($domainId)
+                    ? 'true as selected' 
+                    : 'CASE WHEN rol_permiso.idpermiso IS NOT NULL THEN true ELSE false END as selected'
+            );
+    
+        // Join para comparar con el rol especificado
+        $query->join('rol_permiso as rol_permiso_compare', function ($join) use ($rolIdToCompare, $domainId) {
+            $join->on('permiso.id', '=', 'rol_permiso_compare.idpermiso')
+                 ->where('rol_permiso_compare.idrol', $rolIdToCompare);
+            
+            if (!is_null($domainId)) {
+                $join->where('rol_permiso_compare.domain_id', $domainId);
+            }
+        });
+
+        // Join para el rol actual
+        if (is_null($domainId)) {
+            $query->leftJoin('rol_permiso', function ($join) use ($rolId) {
+                $join->on('permiso.id', '=', 'rol_permiso.idpermiso')
+                     ->where('rol_permiso.idrol', $rolId);
+            });
+        } else {
+            $query->leftJoin('rol_permiso', function ($join) use ($rolId, $domainId) {
+                $join->on('permiso.id', '=', 'rol_permiso.idpermiso')
+                     ->where('rol_permiso.idrol', $rolId)
+                     ->where('rol_permiso.domain_id', $domainId);
+            });
+        }
+    
+        return $query;
+    };
+    
+    // Query principal
+    $query = $query->whereNull('permiso_parent_id')
+        ->select('permiso.*')
+        ->selectRaw('permiso.id=0 as isExpanded')
+        ->selectRaw('CASE WHEN rol_permiso_compare.idpermiso IS NOT NULL THEN true ELSE false END as has_permission')
+        ->selectRaw(
+            is_null($domainId)
+                ? 'true as selected'
+                : 'CASE WHEN rol_permiso.idpermiso IS NOT NULL THEN true ELSE false END as selected'
+        )
+        // Join para comparar con el rol especificado
+        ->leftJoin('rol_permiso as rol_permiso_compare', function ($join) use ($rolIdToCompare, $domainId) {
+            $join->on('permiso.id', '=', 'rol_permiso_compare.idpermiso')
+                 ->where('rol_permiso_compare.idrol', $rolIdToCompare);
+            
+            if (!is_null($domainId)) {
+                $join->where('rol_permiso_compare.domain_id', $domainId);
+            }
+        })
+        // Join para el rol actual
+        ->leftJoin('rol_permiso', function ($join) use ($rolId, $domainId) {
+            $join->on('permiso.id', '=', 'rol_permiso.idpermiso')
+                 ->where('rol_permiso.idrol', $rolId);
+            
+            if (!is_null($domainId)) {
+                $join->where('rol_permiso.domain_id', $domainId);
+            }
+        })
+        ->with(['subPermisos' => function($query) use ($selectFields, $rolIdToCompare, $rolId, $domainId) {
+            $selectFields($query)->with(['subPermisos' => function($query) use ($selectFields, $rolIdToCompare, $rolId, $domainId) {
+                $selectFields($query);
+            }]);
+        }])
+        ->orderBy('permiso.id');
+    
+    // Filtramos y ordenamos los resultados
+        return $query->get()
+            ->filter(function($permiso) {
+                return $permiso->subPermisos->isNotEmpty() || $permiso->has_permission;
+            })
+            ->values();
+    }
+
 }
