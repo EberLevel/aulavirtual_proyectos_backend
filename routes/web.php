@@ -183,7 +183,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('roles-dropdown', 'RolController@getRolesDropDown');
 
     $router->post('rol/guardar-permiso', 'RolController@guardarPermiso');
-    $router->get('rol/get-rol-permiso/{id}/{domain_id}', 'RolController@getRolPermisos');
+    $router->get( 'rol/get-rol-permiso/{id}/{domain_id}', 'RolController@getRolPermisos');
+    $router->get('rol/get-rol-permiso-admin/{id}/{domain_id}', 'RolController@getRolPermisosAdmin');
 
     $router->get('empresas', 'EmpresaController@index');
     $router->post('empresa/guardar', 'EmpresaController@store');
