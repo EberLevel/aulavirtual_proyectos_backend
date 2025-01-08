@@ -13,13 +13,15 @@ class InstitucionesPuestoController extends Controller
     {
             $area_id = request()->query('area_id')??null;
             return  DB::table('area_puestos')->
-            join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
-            join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
+            leftJoin('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
+            leftJoin('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
+            leftJoin('instituciones as institucion_puesto', 'area_puestos.institucion_id', '=', 'institucion_puesto.id')->
             leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
             ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
             leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
             leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
             where('institucion_area.institucion_id', $area_id)->
+            orWhere('institucion_puesto.id', $area_id)->
             select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
             'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area',
             'instituciones.siglas as institucion_siglas'
