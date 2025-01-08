@@ -12,15 +12,14 @@ class InstitucionesPuestoController extends Controller
     public function index()
     {
             $area_id = request()->query('area_id')??null;
-            return  DB::table('area_puestos')->when($area_id, function ($query, $area_id) {
-                return $query->where('area_id', $area_id);
-            })->
+            return  DB::table('area_puestos')->
             join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->
             join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
             leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
             ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->
             leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->
             leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->
+            where('institucion_area.institucion_id', $area_id)->
             select('area_puestos.*', 'puestos_estado.nombre as estado', 'modalidad_puesto.nombre as modalidad_posicion',
             'puesto_continuidad.nombre as continuidad', 'puesto_permanencia.nombre as permanencia','institucion_area.nombre as area',
             'instituciones.siglas as institucion_siglas'
@@ -52,7 +51,6 @@ class InstitucionesPuestoController extends Controller
         $id = $request->input('puesto_id');
         $puesto = $request->all();
         $rules = [
-            'area_id' => 'exists:institucion_area,id|sometimes',
             'codigo' => 'required|string|max:191',
             'nombre' => 'required|string|max:191',
             'telefono' => 'sometimes|string|max:15',
