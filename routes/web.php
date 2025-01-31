@@ -66,6 +66,13 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('experiencia-laboral/{id_postulante}', 'ExperienciaLaboralController@index');
     $router->delete('experiencia-laboral/{id}', 'ExperienciaLaboralController@destroy');
 
+    // Experiencia Especifica
+    $router->get('experiencia-especifica/data-create/{domain_id}', 'ExperienciaLaboralController@getDataCreate');
+    $router->post('experiencia-especifica', 'ExperienciaLaboralController@store');
+    $router->put('experiencia-especifica/{id}', 'ExperienciaLaboralController@update');
+    $router->get('experiencia-especifica/{id_postulante}', 'ExperienciaLaboralController@index');
+    $router->delete('experiencia-especifica/{id}', 'ExperienciaLaboralController@destroy');
+
     // Referencias Laborales
     $router->get('referencias-laborales/{id_postulante}', 'ReferenciasLaboralesController@index');
     $router->post('referencias-laborales', 'ReferenciasLaboralesController@store');
@@ -173,7 +180,6 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}', 'CursoController@getCursosByPlanEstudioYCarrera');
 
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}/{alumnoId}', 'CursoController@getCursosByPlanEstudioYCarrera');
-
 
     $router->get('roles/{domain_id}', 'RolController@index');
     $router->post('rol/guardar', 'RolController@store');
