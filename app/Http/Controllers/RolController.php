@@ -10,36 +10,53 @@ use DateTime;
 use Illuminate\Support\Facades\DB;
 use App\Traits\CommonTrait;
 use App\Models\Permiso;
+use Illuminate\Support\Facades\Log;
 
 class RolController extends Controller
 {
     use CommonTrait;
-    public function index($domain_id)
+
+    public function index($domain_id, $rol_id)
     {
-        $data = Rol::all();
-        if($domain_id=="null"){
-            return response()->json($data);
-        }else{
-            //filteer permise with id 1 not allowed
-            $data = Rol::where('id','!=',1)->get();
-            
+        Log::info('👉 domain_id: ' . $domain_id);
+        Log::info('👉 rol_id: ' . $rol_id);
+    
+        if ((int)$rol_id === 1) {
+            return response()->json(Rol::all());
         }
-        return response()->json($data);
+    
+        if (!empty($domain_id)) {
+            $roles = Rol::where('domain_id', $domain_id)
+                        ->where('id', '!=', 1)
+                        ->get();
+    
+            Log::info('🔎 Roles encontrados: ' . $roles->count());
+    
+            return response()->json($roles);
+        }
+    
+        return response()->json([], 200);
     }
+    
+    
+    
 
     public function store(Request $request)
     {
         $this->validate($request, [
             'nombre' => 'required|string|max:255',
+            'domain_id' => 'nullable|integer|exists:domains,id' 
         ]);
-
+    
         $rol = Rol::create([
             'nombre' => $request->nombre,
-            'fecha' => new DateTime()
+            'fecha' => new DateTime(),
+            'domain_id' => $request->domain_id
         ]);
-
+    
         return response()->json($rol, 201);
     }
+    
 
     public function show($id)
     {
@@ -117,9 +134,19 @@ class RolController extends Controller
             return response()->json($rol);
         
     }
-    public function getRolesDropDown()
+    public function getRolesDropDown($domain_id, $rol_id)
     {
-        $roles = $this->getRolesDropDownTrait();
+        if ((int)$rol_id === 1) {
+            // Superadmin puede ver todos los roles
+            return response()->json(Rol::all());
+        }
+    
+        // Usuarios normales solo ven roles de su dominio (y excluye rol ID 1 si deseas)
+        $roles = Rol::where('domain_id', $domain_id)
+                    ->where('id', '!=', 1)
+                    ->get();
+    
         return response()->json($roles);
     }
+    
 }

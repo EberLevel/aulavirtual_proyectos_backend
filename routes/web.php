@@ -22,9 +22,11 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     });
     $router->get('usuarios/{domain_id}', 'UsuarioController@index');
     $router->get('usuario/{id}', 'UsuarioController@getUser');
-    $router->get('usuarios/entidades/{id}', 'UsuarioController@getEntidades');    
+    $router->get('usuarios/entidades/{id}', 'UsuarioController@getEntidades');
     $router->post('usuarios', 'UsuarioController@store');
     $router->delete('usuarios/{id}', 'UsuarioController@destroy');
+    $router->get('usuarios/permisos/{id}', 'UsuarioController@getPermisos');
+
     $router->post('login', 'LoginController@login');
 
     $router->get('maestros', 'MaestroController@index');
@@ -116,7 +118,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');
     $router->get('cv', 'InstitucionesController@getCv');
     $router->get('institutions-dropdown', 'InstitucionesController@dropdown');
-    $router->get('subinstitutions-dropdown','InstitucionesController@getInstitucionesByDomain');
+    $router->get('subinstitutions-dropdown', 'InstitucionesController@getInstitucionesByDomain');
     $router->get('permanencia-dropdown', 'InstitucionesController@getPermanenciaDropdown');
     $router->get('continuidad-dropdown', 'InstitucionesController@getContinuidadDropdown');
     //institution areas
@@ -181,15 +183,15 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
 
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}/{alumnoId}', 'CursoController@getCursosByPlanEstudioYCarrera');
 
-    $router->get('roles/{domain_id}', 'RolController@index');
+    $router->get('roles/{domain_id}/{rol_id}', 'RolController@index');
     $router->post('rol/guardar', 'RolController@store');
     $router->get('rol/{id}', 'RolController@show');
     $router->put('rol/guardar/{id}', 'RolController@update');
     $router->delete('rol/eliminar/{id}', 'RolController@destroy');
-    $router->get('roles-dropdown', 'RolController@getRolesDropDown');
+    $router->get('roles-dropdown/{domain_id}/{rol_id}', 'RolController@getRolesDropDown');
 
     $router->post('rol/guardar-permiso', 'RolController@guardarPermiso');
-    $router->get( 'rol/get-rol-permiso/{id}/{domain_id}', 'RolController@getRolPermisos');
+    $router->get('rol/get-rol-permiso/{id}/{domain_id}', 'RolController@getRolPermisos');
     $router->get('rol/get-rol-permiso-admin/{id}/{domain_id}', 'RolController@getRolPermisosAdmin');
     $router->get('rol/get-rol-permiso-admin-dominio/{id}/{domain_id}', 'RolController@getRolPermisosAdminDominio');
     $router->get('empresas', 'EmpresaController@index');
@@ -208,7 +210,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('capacitaciones-eliminar/{id}', 'CapacitacionController@destroy');
     $router->get('capacitaciones-codigo', 'CapacitacionController@generateCode');
     $router->get('capacitaciones-docentes', 'CapacitacionController@listarDocentes');
-    
+
     // para pagos
     $router->get('pagos/{domain_id}', 'PagoController@index');
     $router->get('pagos/{domain_id}/{pago_id}/alumnos', 'PagoController@getPaymentByStudent');

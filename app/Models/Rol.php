@@ -12,8 +12,8 @@ class Rol extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'id', 'nombre','fecha'
-    ];
+        'id', 'nombre', 'fecha', 'domain_id' 
+    ];    
 
 
     public function permisos()
