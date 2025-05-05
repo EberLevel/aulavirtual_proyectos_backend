@@ -61,7 +61,7 @@ class EstadoActualController extends Controller
 
         if (!$TipoEstado) {
             return response()->json(['message' => 'Estado  no encontrado'], 404);
-        }
+        } 
 
         return response()->json(['data' => $TipoEstado], 200);
     }

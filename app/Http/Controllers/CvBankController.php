@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Controllers\bcrypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 class CvBankController extends Controller
 {
     /**
@@ -138,6 +140,10 @@ class CvBankController extends Controller
             'domain_id' => $request->input('domain_id'),
             'user_id' => $user->id, 
             'image' => $request->input('imagen'),
+            'color_id' => $request->input('color_id'),
+            'link_facebook' => $request->input('link_facebook'),
+            'link_instagram' => $request->input('link_instagram'),
+            'link_tik_tok' => $request->input('link_tik_tok'),
         ]);
     
         $user->update(['postulante_id' => $cvBank->id]);
@@ -187,9 +193,14 @@ class CvBankController extends Controller
             'age' => 'required|integer',
             'education_degree_id' => 'required|integer',
             'profession_id' => 'nullable|integer',
-            'email' => 'nullable|string|max:100'
+            'email' => 'nullable|string|max:100',
+            'color_id' => 'nullable|integer',
+            'link_facebook' => 'nullable|string|max:255',
+            'link_instagram' => 'nullable|string|max:255',
+            'link_tik_tok' => 'nullable|string|max:255',
+            
         ]);
-
+        Log::info('Data received for update: ', $data);
         $cvBank = CvBank::findOrFail($id);
         //find if exists dni or email in user where user_id is different from the current user
         $userExist = \App\Models\User::where('email', $request->input('email'))->where('postulante_id', '!=', $cvBank->id)->first();
@@ -213,6 +224,7 @@ class CvBankController extends Controller
             'type' => 'user',
             'status' => 'active',
             'postulante_id' => $cvBank->id
+            
         ];
         if($user){
             $user->update($data);
