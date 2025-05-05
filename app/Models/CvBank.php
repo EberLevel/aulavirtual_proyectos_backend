@@ -47,7 +47,11 @@ class CvBank extends Model
         'date_affiliation',
         'estado_actual_id',
         'training_type_id',
-        'domain_id'
+        'domain_id',
+        'color_id',
+        'link_facebook',
+        'link_instagram',
+        'link_tik_tok'
     ];
 
     // Relaciones con otras tablas
