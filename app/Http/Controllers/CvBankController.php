@@ -91,7 +91,7 @@ class CvBankController extends Controller
             'sex' => 'nullable|string|max:1',
             'estado_actual_id' => 'nullable|integer',
             'domain_id' => 'required|integer|exists:domains,id',
-            'imagen' => 'nullable|string',
+            'image' => 'nullable|string',
         ]);
     
         $userExist = \App\Models\User::where('email', $request->input('email'))->first();
@@ -139,7 +139,7 @@ class CvBankController extends Controller
             'estado_actual_id' => $request->input('estado_actual_id'),
             'domain_id' => $request->input('domain_id'),
             'user_id' => $user->id, 
-            'image' => $request->input('imagen'),
+            'image' => $request->input('image'),
             'color_id' => $request->input('color_id'),
             'link_facebook' => $request->input('link_facebook'),
             'link_instagram' => $request->input('link_instagram'),
@@ -184,7 +184,7 @@ class CvBankController extends Controller
             'code' => 'required|string|max:100',
             'identification_document_id' => 'required|integer',
             'identification_number' => 'string|max:100',
-            'image' => 'nullable|string|regex:/^data:image\/(jpeg|png|gif|bmp);base64,/',  // Validación de cadena Base64
+            'image' => 'nullable|string',  // Validación de cadena Base64
             'names' => 'string|max:100',
             'phone' => 'nullable|string|max:20',
             'marital_status_id' => 'required|integer',
@@ -200,6 +200,7 @@ class CvBankController extends Controller
             'link_tik_tok' => 'nullable|string|max:255',
             
         ]);
+        $request['image'] = $request->input('image') ? base64_decode($request->input('image')) : null;
         Log::info('Data received for update: ', $data);
         $cvBank = CvBank::findOrFail($id);
         //find if exists dni or email in user where user_id is different from the current user
