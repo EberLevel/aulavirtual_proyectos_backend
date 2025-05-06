@@ -175,7 +175,8 @@ class CvBankController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Validación personalizada para imágenes Base64
+        try{
+            // Validación personalizada para imágenes Base64
         $validator = Validator::make($request->all(), [
             'position_code' => 'required|string|max:100',
             'code' => 'required|string|max:100',
@@ -262,6 +263,12 @@ class CvBankController extends Controller
             'message' => 'Banco de CV actualizado correctamente',
             'data' => $cvBank
         ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Banco de CV no encontrado'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar el banco de CV: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al actualizar el banco de CV'], 500);
+        }
     }
 
     /**
