@@ -96,7 +96,7 @@ class CvBankController extends Controller
             'domain_id' => 'required|integer|exists:domains,id',
             'image' => 'nullable|string',
         ]);
-    
+
         $userExist = \App\Models\User::where('email', $request->input('email'))->first();
         if ($userExist) {
             return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
@@ -105,7 +105,7 @@ class CvBankController extends Controller
         if ($userExist) {
             return response()->json(['message' => 'El DNI ya está en uso'], 400);
         }
-        
+
         $user = new \App\Models\User([
             'name' => $request->input('names'),
             'email' => $request->input('email'),
@@ -117,10 +117,10 @@ class CvBankController extends Controller
             'status' => 'active',
         ]);
         //find if user exists with same email or dni
-       
+
         $user->save();
         //find if exist user with same dni 
-        
+
         // Ahora crea el registro en la tabla `cv_banks`
         $cvBank = CvBank::create([
             'position_code' => $request->input('position_code'),
@@ -141,39 +141,32 @@ class CvBankController extends Controller
             'date_affiliation' => date('Y-m-d'),
             'estado_actual_id' => $request->input('estado_actual_id'),
             'domain_id' => $request->input('domain_id'),
-            'user_id' => $user->id, 
+            'user_id' => $user->id,
             'image' => $this->uploadFile($request->input('image'), 'cv_banks'),
             'color_id' => $request->input('color_id'),
             'link_facebook' => $request->input('link_facebook'),
             'link_instagram' => $request->input('link_instagram'),
             'link_tik_tok' => $request->input('link_tik_tok'),
         ]);
-    
+
         $user->update(['postulante_id' => $cvBank->id]);
-    
+
         return response()->json(['cvBank' => $cvBank], 201);
     }
-    
+
     /**
      * Display the specified resource.
      */
     public function show($id)
     {
-        $cvBank = DB::table('cv_banks')->where('cv_banks.id', $id)->
-        leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')->
-        leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')->
-        leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')->
-        leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')->
-        leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')->
-        select('cv_banks.*', 'domains.nombre as domain', 'estado_civil.nombre as marital_status', 'grado_instruccion.nombre as education_degree', 'estado_actual.nombre as estado_actual', 'doc_identidad.nombre as identification_document')->
-        first();
+        $cvBank = DB::table('cv_banks')->where('cv_banks.id', $id)->leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')->leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')->leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')->leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')->leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')->select('cv_banks.*', 'domains.nombre as domain', 'estado_civil.nombre as marital_status', 'grado_instruccion.nombre as education_degree', 'estado_actual.nombre as estado_actual', 'doc_identidad.nombre as identification_document')->first();
         return response()->json(['cvBank' => $cvBank]);
     }
 
     public function showByUser($id)
     {
         $cvBank = CvBank::where('user_id', $id)->first();
- 
+
         return response()->json(['cvBank' => $cvBank]);
     }
 
@@ -188,7 +181,7 @@ class CvBankController extends Controller
             'code' => 'required|string|max:100',
             'identification_document_id' => 'required|integer',
             'identification_number' => 'string|max:100',
-            
+
             'names' => 'string|max:100',
             'phone' => 'nullable|string|max:20',
             'marital_status_id' => 'required|integer',
@@ -202,20 +195,26 @@ class CvBankController extends Controller
             'link_facebook' => 'nullable|string|max:255',
             'link_instagram' => 'nullable|string|max:255',
             'link_tik_tok' => 'nullable|string|max:255',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048', // 2MB máximo
+
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-    
-        $data = $validator->validated();
-        
-        // Procesar la imagen si existe
-        $data['image'] = $this->uploadFile($request->input('image'), 'cv_banks');
-    
-        
+
         $cvBank = CvBank::findOrFail($id);
-    
+        $data = $validator->validated();
+
+        // Procesar la imagen si existe
+        if ($request->hasFile('image')) {
+            $data['image'] = $this->uploadFile($request->file('image'), 'cv_banks');
+        } else {
+            unset($data['image']); // No actualizar la imagen si no se envió
+        }
+
+        $cvBank = CvBank::findOrFail($id);
+
         // Validar email único
         $userExist = \App\Models\User::where('email', $request->input('email'))
             ->where('postulante_id', '!=', $cvBank->id)
@@ -223,7 +222,7 @@ class CvBankController extends Controller
         if ($userExist) {
             return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
         }
-    
+
         // Validar DNI único
         $userExist = \App\Models\User::where('dni', $request->input('identification_number'))
             ->where('postulante_id', '!=', $cvBank->id)
@@ -231,9 +230,9 @@ class CvBankController extends Controller
         if ($userExist) {
             return response()->json(['message' => 'El DNI ya está en uso'], 400);
         }
-    
+
         $cvBank->update($data);
-    
+
         // Actualizar o crear usuario asociado
         $userData = [
             'name' => $request->input('names'),
@@ -245,12 +244,12 @@ class CvBankController extends Controller
             'status' => 'active',
             'postulante_id' => $cvBank->id
         ];
-    
+
         // Solo actualizar password si se proporcionó
         if ($request->filled('password')) {
             $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->input('password'));
         }
-    
+
         $user = \App\Models\User::find($cvBank->user_id);
         if ($user) {
             $user->update($userData);
@@ -258,9 +257,9 @@ class CvBankController extends Controller
             $user = new \App\Models\User($userData);
             $user->save();
         }
-    
+
         return response()->json([
-            'message' => 'Banco de CV actualizado correctamente', 
+            'message' => 'Banco de CV actualizado correctamente',
             'data' => $cvBank
         ], 200);
     }
