@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Controllers\bcrypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class CvBankController extends Controller
 {
@@ -179,12 +180,36 @@ class CvBankController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = $this->validate($request, [
+        // Validación personalizada para imágenes Base64
+        $validator = Validator::make($request->all(), [
             'position_code' => 'required|string|max:100',
             'code' => 'required|string|max:100',
             'identification_document_id' => 'required|integer',
             'identification_number' => 'string|max:100',
-            'image' => 'nullable|string',  // Validación de cadena Base64
+            'image' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if ($value === null) return;
+                    
+                    // Verificar el formato Base64 de imagen
+                    if (!preg_match('/^data:image\/(\w+);base64,/', $value, $matches)) {
+                        $fail('El formato de la imagen no es válido. Debe ser una cadena Base64 con prefijo de tipo de imagen.');
+                    }
+                    
+                    // Decodificar y verificar la imagen
+                    $imageData = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $value));
+                    if ($imageData === false) {
+                        $fail('La imagen no pudo ser decodificada correctamente.');
+                    }
+                    
+                    // Opcional: Verificar el tipo de imagen
+                    $imageInfo = getimagesizefromstring($imageData);
+                    if ($imageInfo === false) {
+                        $fail('Los datos proporcionados no corresponden a una imagen válida.');
+                    }
+                }
+            ],
             'names' => 'string|max:100',
             'phone' => 'nullable|string|max:20',
             'marital_status_id' => 'required|integer',
@@ -198,44 +223,73 @@ class CvBankController extends Controller
             'link_facebook' => 'nullable|string|max:255',
             'link_instagram' => 'nullable|string|max:255',
             'link_tik_tok' => 'nullable|string|max:255',
-            
         ]);
-        $request['image'] = $request->input('image') ? base64_decode($request->input('image')) : null;
+    
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+    
+        $data = $validator->validated();
+        
+        // Procesar la imagen si existe
+        if (!empty($data['image'])) {
+            $imageData = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['image']));
+            $data['image'] = $imageData; // Guardar los datos binarios de la imagen
+        } else {
+            $data['image'] = null;
+        }
+    
         Log::info('Data received for update: ', $data);
+        
         $cvBank = CvBank::findOrFail($id);
-        //find if exists dni or email in user where user_id is different from the current user
-        $userExist = \App\Models\User::where('email', $request->input('email'))->where('postulante_id', '!=', $cvBank->id)->first();
+    
+        // Validar email único
+        $userExist = \App\Models\User::where('email', $request->input('email'))
+            ->where('postulante_id', '!=', $cvBank->id)
+            ->first();
         if ($userExist) {
             return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
         }
-        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->where('postulante_id', '!=', $cvBank->id)->first();
+    
+        // Validar DNI único
+        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))
+            ->where('postulante_id', '!=', $cvBank->id)
+            ->first();
         if ($userExist) {
             return response()->json(['message' => 'El DNI ya está en uso'], 400);
         }
+    
         $cvBank->update($data);
-        //get user_id where cv_bank->user_id
-        $user = \App\Models\User::find($cvBank->user_id);
-        $data=[
+    
+        // Actualizar o crear usuario asociado
+        $userData = [
             'name' => $request->input('names'),
             'email' => $request->input('email'),
             'dni' => $request->input('identification_number'),
-            'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
             'domain_id' => $request->input('domain_id'),
             'rol_id' => 21,
             'type' => 'user',
             'status' => 'active',
             'postulante_id' => $cvBank->id
-            
         ];
-        if($user){
-            $user->update($data);
-        }else{
-            $user = new \App\Models\User($data);
+    
+        // Solo actualizar password si se proporcionó
+        if ($request->filled('password')) {
+            $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->input('password'));
+        }
+    
+        $user = \App\Models\User::find($cvBank->user_id);
+        if ($user) {
+            $user->update($userData);
+        } else {
+            $user = new \App\Models\User($userData);
             $user->save();
         }
-        
-
-        return response()->json(['message' => 'Banco de CV actualizado correctamente', 'data' => $cvBank], 200);
+    
+        return response()->json([
+            'message' => 'Banco de CV actualizado correctamente', 
+            'data' => $cvBank
+        ], 200);
     }
 
     /**
