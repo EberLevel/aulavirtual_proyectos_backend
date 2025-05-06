@@ -94,63 +94,105 @@ class CvBankController extends Controller
             'sex' => 'nullable|string|max:1',
             'estado_actual_id' => 'nullable|integer',
             'domain_id' => 'required|integer|exists:domains,id',
-            'image' => 'nullable|string',
+            'imagen' => 'nullable|string', // Cambiado para base64
+            'nombre_archivo' => 'nullable|string|max:255', // Para el nombre del archivo
         ]);
 
-        $userExist = \App\Models\User::where('email', $request->input('email'))->first();
-        if ($userExist) {
-            return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+        try {
+            // Verificar usuarios existentes
+            $userExist = \App\Models\User::where('email', $request->input('email'))->first();
+            if ($userExist) {
+                return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+            }
+
+            $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->first();
+            if ($userExist) {
+                return response()->json(['message' => 'El DNI ya está en uso'], 400);
+            }
+
+            // Procesar la imagen base64 si existe
+            $imagePath = null;
+            if ($request->filled('imagen')) {
+                // Obtener datos base64 y nombre del archivo
+                $base64Image = $request->input('imagen');
+                $fileName = $request->input('nombre_archivo') ?: 'profile-' . time() . '.jpg';
+
+                // Generar nombre único de archivo
+                $imageName = time() . '-' . str_replace(' ', '-', $fileName);
+
+                // Definir directorio
+                $directory = 'cv_banks';
+                $uploadPath = public_path('uploads/' . $directory);
+
+                // Crear directorio si no existe
+                if (!file_exists($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+
+                // Guardar archivo
+                $filePath = $uploadPath . '/' . $imageName;
+                file_put_contents($filePath, base64_decode($base64Image));
+
+                // Guardar ruta relativa
+                $imagePath = 'uploads/' . $directory . '/' . $imageName;
+            }
+
+            // Crear usuario
+            $user = new \App\Models\User([
+                'name' => $request->input('names'),
+                'email' => $request->input('email'),
+                'dni' => $request->input('identification_number'),
+                'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+                'domain_id' => $request->input('domain_id'),
+                'rol_id' => 21,
+                'type' => 'user',
+                'status' => 'active',
+            ]);
+
+            $user->save();
+
+            // Crear registro en cv_banks
+            $cvBankData = [
+                'position_code' => $request->input('position_code'),
+                'code' => $request->input('code'),
+                'identification_document_id' => $request->input('identification_document_id'),
+                'identification_number' => $request->input('identification_number'),
+                'names' => $request->input('names'),
+                'phone' => $request->input('phone'),
+                'marital_status_id' => $request->input('marital_status_id'),
+                'number_children' => $request->input('number_children'),
+                'date_birth' => $request->input('date_birth'),
+                'age' => $request->input('age'),
+                'education_degree_id' => $request->input('education_degree_id'),
+                'profession_id' => $request->input('profession_id'),
+                'ocupacion_actual_id' => $request->input('ocupacion_actual_id'),
+                'email' => $request->input('email'),
+                'sex' => $request->input('sex'),
+                'date_affiliation' => date('Y-m-d'),
+                'estado_actual_id' => $request->input('estado_actual_id'),
+                'domain_id' => $request->input('domain_id'),
+                'user_id' => $user->id,
+                'color_id' => $request->input('color_id'),
+                'link_facebook' => $request->input('link_facebook'),
+                'link_instagram' => $request->input('link_instagram'),
+                'link_tik_tok' => $request->input('link_tik_tok'),
+            ];
+
+            // Añadir la ruta de la imagen si existe
+            if ($imagePath) {
+                $cvBankData['image'] = $imagePath;
+            }
+
+            $cvBank = CvBank::create($cvBankData);
+
+            // Actualizar relación con el usuario
+            $user->update(['postulante_id' => $cvBank->id]);
+
+            return response()->json(['cvBank' => $cvBank], 201);
+        } catch (\Exception $e) {
+            Log::error('Error al crear postulante: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al crear el postulante: ' . $e->getMessage()], 500);
         }
-        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->first();
-        if ($userExist) {
-            return response()->json(['message' => 'El DNI ya está en uso'], 400);
-        }
-
-        $user = new \App\Models\User([
-            'name' => $request->input('names'),
-            'email' => $request->input('email'),
-            'dni' => $request->input('identification_number'),
-            'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
-            'domain_id' => $request->input('domain_id'),
-            'rol_id' => 21,
-            'type' => 'user',
-            'status' => 'active',
-        ]);
-        //find if user exists with same email or dni
-
-        $user->save();
-        //find if exist user with same dni 
-
-        // Ahora crea el registro en la tabla `cv_banks`
-        $cvBank = CvBank::create([
-            'position_code' => $request->input('position_code'),
-            'code' => $request->input('code'),
-            'identification_document_id' => $request->input('identification_document_id'),
-            'identification_number' => $request->input('identification_number'),
-            'names' => $request->input('names'),
-            'phone' => $request->input('phone'),
-            'marital_status_id' => $request->input('marital_status_id'),
-            'number_children' => $request->input('number_children'),
-            'date_birth' => $request->input('date_birth'),
-            'age' => $request->input('age'),
-            'education_degree_id' => $request->input('education_degree_id'),
-            'profession_id' => $request->input('profession_id'),
-            'ocupacion_actual_id' => $request->input('ocupacion_actual_id'),
-            'email' => $request->input('email'),
-            'sex' => $request->input('sex'),
-            'date_affiliation' => date('Y-m-d'),
-            'estado_actual_id' => $request->input('estado_actual_id'),
-            'domain_id' => $request->input('domain_id'),
-            'user_id' => $user->id,
-            'color_id' => $request->input('color_id'),
-            'link_facebook' => $request->input('link_facebook'),
-            'link_instagram' => $request->input('link_instagram'),
-            'link_tik_tok' => $request->input('link_tik_tok'),
-        ]);
-
-        $user->update(['postulante_id' => $cvBank->id]);
-
-        return response()->json(['cvBank' => $cvBank], 201);
     }
 
     /**
