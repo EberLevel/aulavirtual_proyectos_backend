@@ -9,11 +9,11 @@ use App\Http\Controllers\bcrypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use App\Traits\FileTrait;
+
 
 class CvBankController extends Controller
 {
-    use FileTrait;
+
     /**
      * Display a listing of the resource.
      */
@@ -142,7 +142,6 @@ class CvBankController extends Controller
             'estado_actual_id' => $request->input('estado_actual_id'),
             'domain_id' => $request->input('domain_id'),
             'user_id' => $user->id,
-            'image' => $this->uploadFile($request->input('image'), 'cv_banks'),
             'color_id' => $request->input('color_id'),
             'link_facebook' => $request->input('link_facebook'),
             'link_instagram' => $request->input('link_instagram'),
@@ -208,11 +207,7 @@ class CvBankController extends Controller
         $data = $validator->validated();
 
         // Procesar la imagen si existe
-        if ($request->hasFile('image')) {
-            $data['image'] = $this->uploadFile($request->file('image'), 'cv_banks');
-        } else {
-            unset($data['image']); // No actualizar la imagen si no se envió
-        }
+     
 
         $cvBank = CvBank::findOrFail($id);
 
