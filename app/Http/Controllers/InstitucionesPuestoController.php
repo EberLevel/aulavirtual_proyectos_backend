@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Puesto; // Asegúrate de crear el modelo correspondiente
+use App\Models\Puesto;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
@@ -57,6 +57,7 @@ class InstitucionesPuestoController extends Controller
             'nombre' => 'required|string|max:191',
             'telefono' => 'sometimes|string|max:15',
             'salario_minimo' => 'sometimes|numeric',
+            'descripcion_servicio' => 'required|string|max:500',
             'salario_maximo' => 'sometimes|numeric',
             'diferencia' => 'sometimes|numeric',
             'orden' => 'sometimes|regex:/^[0-9]+(\.[0-9]+)*$/'
