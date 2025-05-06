@@ -202,7 +202,7 @@ class CvBankController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
+        
         $cvBank = CvBank::findOrFail($id);
         $data = $validator->validated();
 
