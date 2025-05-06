@@ -9,9 +9,11 @@ use App\Http\Controllers\bcrypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use App\Traits\FileTrait;
 
 class CvBankController extends Controller
 {
+    use FileTrait;
     /**
      * Display a listing of the resource.
      */
@@ -140,7 +142,7 @@ class CvBankController extends Controller
             'estado_actual_id' => $request->input('estado_actual_id'),
             'domain_id' => $request->input('domain_id'),
             'user_id' => $user->id, 
-            'image' => $request->input('image'),
+            'image' => $this->uploadFile($request->input('image'), 'cv_banks'),
             'color_id' => $request->input('color_id'),
             'link_facebook' => $request->input('link_facebook'),
             'link_instagram' => $request->input('link_instagram'),
@@ -186,30 +188,7 @@ class CvBankController extends Controller
             'code' => 'required|string|max:100',
             'identification_document_id' => 'required|integer',
             'identification_number' => 'string|max:100',
-            'image' => [
-                'nullable',
-                'string',
-                function ($attribute, $value, $fail) {
-                    if ($value === null) return;
-                    
-                    // Verificar el formato Base64 de imagen
-                    if (!preg_match('/^data:image\/(\w+);base64,/', $value, $matches)) {
-                        $fail('El formato de la imagen no es válido. Debe ser una cadena Base64 con prefijo de tipo de imagen.');
-                    }
-                    
-                    // Decodificar y verificar la imagen
-                    $imageData = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $value));
-                    if ($imageData === false) {
-                        $fail('La imagen no pudo ser decodificada correctamente.');
-                    }
-                    
-                    // Opcional: Verificar el tipo de imagen
-                    $imageInfo = getimagesizefromstring($imageData);
-                    if ($imageInfo === false) {
-                        $fail('Los datos proporcionados no corresponden a una imagen válida.');
-                    }
-                }
-            ],
+            
             'names' => 'string|max:100',
             'phone' => 'nullable|string|max:20',
             'marital_status_id' => 'required|integer',
@@ -232,14 +211,8 @@ class CvBankController extends Controller
         $data = $validator->validated();
         
         // Procesar la imagen si existe
-        if (!empty($data['image'])) {
-            $imageData = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $data['image']));
-            $data['image'] = $imageData; // Guardar los datos binarios de la imagen
-        } else {
-            $data['image'] = null;
-        }
+        $data['image'] = $this->uploadFile($request->input('image'), 'cv_banks');
     
-        Log::info('Data received for update: ', $data);
         
         $cvBank = CvBank::findOrFail($id);
     
