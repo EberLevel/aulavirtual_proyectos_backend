@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Puesto;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Log;
 class InstitucionesPuestoController extends Controller
 {
     public function index()
@@ -100,8 +100,41 @@ class InstitucionesPuestoController extends Controller
     }
     public function getLastId(){
         $puesto = DB::table('area_puestos')->orderBy('id', 'desc')->first();
-        //concat to 6 digits 
         $id = str_pad($puesto->id + 1, 6, "0", STR_PAD_LEFT);
         return response()->json($id);
+    }
+    public function getControlPuestos($postulante_id){
+        try{
+            //get from cv_banks
+            $data = DB::table('cv_banks as cv')
+            ->leftJoin('area_puestos as ap', 'cv.id', '=', 'ap.cv_id')
+            ->leftJoin('institucion_area as ia', 'ap.area_id', '=', 'ia.id')
+            ->leftJoin('instituciones as i', 'ia.institucion_id', '=', 'i.id')
+            ->select('cv.estado_actual_id as estado_postulante','cv.color_id','ap.estado as estado_puesto',
+            'ap.dias_restantes','ap.continuidad_id','cv.code as codigo_postulante','cv.id as postulante_id',
+            'ap.orden as n_orden','ap.nombre as objeto_orden','ap.salario_minimo as salario',
+            'ap.fecha_limite','ap.fecha_nombramiento as fecha_ingreso',
+            DB::raw("CONCAT(i.codigo,'-', ia.nombre) as area"),
+            )
+            ->where('cv.id', $postulante_id)
+            ->get();
+            return response()->json($data);
+        }catch(\Exception $e){
+            Log::error('Error al obtener los puestos: ' . $e->getMessage());
+            return response()->json(['message' => 'Error al obtener los puestos'], 500);
+        }
+    }
+    public function storeControlPuestos(Request $request){
+        try{
+            $idPostulante = $request->input('id_postulante');
+            DB::table('cv_banks')->where('id', $idPostulante)->update([
+                'estado_actual_id' => $request->input('estado_actual_postulante_id'),
+                'color_id' => $request->input('color_id'),
+            ]);
+            return response()->json(['message' => 'Postulante actualizado correctamente'], 200);
+        }catch(\Exception $e){
+            Log::error('Error al guardar ' . $e->getMessage());
+            return response()->json(['message' => 'Error al obtener los puestos'], 500);
+        }
     }
 }

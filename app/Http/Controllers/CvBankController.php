@@ -265,7 +265,7 @@ class CvBankController extends Controller
                     mkdir($uploadPath, 0755, true);
                 }
 
-                // Save the file to disk
+                // Save the file to diskg
                 $filePath = $uploadPath . '/' . $imageName;
                 file_put_contents($filePath, base64_decode($base64Image));
 

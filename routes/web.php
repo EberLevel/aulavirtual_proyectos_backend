@@ -121,9 +121,9 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('subinstitutions-dropdown', 'InstitucionesController@getInstitucionesByDomain');
     $router->get('permanencia-dropdown', 'InstitucionesController@getPermanenciaDropdown');
     $router->get('continuidad-dropdown', 'InstitucionesController@getContinuidadDropdown');
-    //institution areas
-
-    //get carreras dropdown
+    $router->get('control-puestos/{postulante_id}', 'InstitucionesPuestoController@getControlPuestos');
+    //post control-puestos
+    $router->post('control-puestos', 'InstitucionesPuestoController@storeControlPuestos');
     $router->get('carreras/{id}', 'CarreraController@show');
     $router->get('carreras-dropdown', 'CarreraController@dropdown');
     $router->get('carreras-dropdown/{plan_de_estudios_id}', 'CarreraController@dropDown');
@@ -166,7 +166,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cvbanks/user/{id}', 'CvBankController@showByUser');
     $router->put('cvbanks/{id}', 'CvBankController@update');
     $router->delete('cvbanks/{id}', 'CvBankController@destroy');
-
+    
 
     $router->post('cursos', 'CursoController@store');
     $router->put('cursos/{id}', 'CursoController@update');
