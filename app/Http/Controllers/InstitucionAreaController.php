@@ -57,10 +57,9 @@ class InstitucionAreaController extends Controller
         return response()->json(null, 204);
     }
     public function getByAreaId($id){
-        return DB::table('institucion_area')->
-        join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->
-        where('institucion_area.id', $id)
-        ->select('institucion_area.*', 'instituciones.nombre as institucion_nombre')->
+        return DB::table('instituciones')->
+        where('instituciones.id', $id)
+        ->select('*')->
         get();
     }
 }
