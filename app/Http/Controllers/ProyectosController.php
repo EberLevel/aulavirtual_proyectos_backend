@@ -144,10 +144,22 @@ class ProyectosController extends Controller
             return response()->json(['message' => 'Modulo no encontrado'], 404);
         }
 
-        // Ordenar las tareas por el campo 'prioridad' de manera ascendente
         $tareas = $modulo->tareas()->orderBy('prioridad', 'asc')->get();
 
-        return response()->json(['data' => $tareas], 200);
+        $tareasConImagenes = $tareas->map(function ($tarea) {
+            $tieneImagenes = $tarea->archivos()->exists(); // Cambia "imagenes" por "archivos"
+            return [
+                'id' => $tarea->id,
+                'descripcion' => $tarea->descripcion,
+                'prioridad' => $tarea->prioridad,
+                'estado' => $tarea->estado,
+                'grupo' => $tarea->grupo,
+                'responsable' => $tarea->responsable,
+                'hasImage' => $tieneImagenes,
+            ];
+        });
+
+        return response()->json(['data' => $tareasConImagenes], 200);
     }
 
 
@@ -351,5 +363,4 @@ class ProyectosController extends Controller
 
         return response()->json(['data' => $modulo], 200);
     }
-
 }
