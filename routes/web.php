@@ -430,7 +430,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
         $router->delete('action/{domain_id}/{id}', 'AccionController@destroy');
     });
 
-    // ofertas de empleo
+    // ofertas de empleoss
     $router->get('ofertas-empleo', 'OfertasEmpleoController@index');
     $router->post('ofertas-empleo', 'OfertasEmpleoController@store');
     $router->get('ofertas-empleo/{id}', 'OfertasEmpleoController@show');
@@ -438,7 +438,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('ofertas-empleo/{id}', 'OfertasEmpleoController@destroy');
 
     // Rutas para proyectos
-    $router->get('proyectos', 'ProyectosController@index'); // Listar todos los proyectos
+    $router->get('proyectos/domain/{domain_id}', 'ProyectosController@index'); // Listar todos los proyectos
     $router->post('proyectos', 'ProyectosController@store'); // Crear un nuevo proyecto
     $router->get('proyectos/{id}', 'ProyectosController@show'); // Mostrar un proyecto específico
     $router->put('proyectos/{id}', 'ProyectosController@update'); // Actualizar un proyecto

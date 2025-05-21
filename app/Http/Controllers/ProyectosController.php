@@ -18,10 +18,20 @@ class ProyectosController extends Controller
     }
 
     // Listar todos los proyectos filtrados por domain_id
-    public function index()
+    public function index($domain_id)
     {
-        $proyectos = Proyecto::where('domain_id', $this->domain_id)->paginate(10);
-        return response()->json($proyectos, 200);
+        $proyectos = Proyecto::where('domain_id', $domain_id)->paginate(10);
+        return response()->json([
+            'data' => $proyectos->items(),
+            'pagination' => [
+                'total' => $proyectos->total(),
+                'per_page' => $proyectos->perPage(),
+                'current_page' => $proyectos->currentPage(),
+                'last_page' => $proyectos->lastPage(),
+                'from' => $proyectos->firstItem(),
+                'to' => $proyectos->lastItem(),
+            ],
+        ], 200);
     }
 
     // Crear un nuevo proyecto
