@@ -83,7 +83,7 @@ class InstitucionesPuestoController extends Controller
                 'institucion_id' => 'sometimes|exists:instituciones,id',
                 'area_id' => 'sometimes|nullable|exists:institucion_area,id',
                 'cv_id' => 'sometimes|nullable|exists:cv_banks,id',
-                'modalidad_posicion' => 'sometimes|exists:modalidad_puesto,id',
+                'modalidad_posicion' => 'nullable|integer',
                 'continuidad_id' => 'sometimes|exists:puesto_continuidad,id',
                 'permanencia_id' => 'sometimes|exists:puesto_permanencia,id',
                 'modalidad' => 'sometimes|string|max:191',
