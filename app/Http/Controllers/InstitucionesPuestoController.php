@@ -22,18 +22,17 @@ class InstitucionesPuestoController extends Controller
             ->leftJoin('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')
             ->leftJoin('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')
             ->leftJoin('instituciones as institucion_puesto', 'area_puestos.institucion_id', '=', 'institucion_puesto.id')
-            ->leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
             ->leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')
             ->leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')
-            ->where('institucion_area.institucion_id', $area_id)
+            ->where('area_puestos.area_id', $area_id) 
             ->orWhere('institucion_puesto.id', $area_id)
             ->select(
                 'area_puestos.*',
-                'puestos_estado.nombre as estado',
                 'puesto_continuidad.nombre as continuidad',
                 'puesto_permanencia.nombre as permanencia',
                 'institucion_area.nombre as area',
-                'instituciones.siglas as institucion_siglas'
+                'instituciones.siglas as institucion_siglas',
+                'institucion_puesto.nombre as institucion_nombre'
             )
             ->orderByRaw('COALESCE(area_puestos.orden, 9999999) ASC')
             ->get();
@@ -41,11 +40,9 @@ class InstitucionesPuestoController extends Controller
     public function getPuestosByDomain()
     {
         $domain_id = request()->query('domain_id') ?? null;
-        $puestos = DB::table('area_puestos')->join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->leftJoin('puestos_estado', 'area_puestos.estado', '=', 'puestos_estado.id')
-            ->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->where('instituciones.domain_id', $domain_id)->select(
+        $puestos = DB::table('area_puestos')->join('institucion_area', 'area_puestos.area_id', '=', 'institucion_area.id')->join('instituciones', 'institucion_area.institucion_id', '=', 'instituciones.id')->leftJoin('modalidad_puesto', 'area_puestos.modalidad_posicion', '=', 'modalidad_puesto.id')->leftJoin('puesto_continuidad', 'area_puestos.continuidad_id', '=', 'puesto_continuidad.id')->leftJoin('puesto_permanencia', 'area_puestos.permanencia_id', '=', 'puesto_permanencia.id')->where('instituciones.domain_id', $domain_id)->select(
                 'area_puestos.*',
                 'instituciones.siglas as institucion_siglas',
-                'puestos_estado.nombre as estado',
                 'modalidad_puesto.nombre as modalidad_posicion',
                 'institucion_area.nombre as area',
                 'instituciones.nombre as institucion',
@@ -75,19 +72,18 @@ class InstitucionesPuestoController extends Controller
                 'capacitacion' => 'sometimes|string',
                 'experiencia_especifica' => 'sometimes|string',
                 'experiencia_general' => 'sometimes|string',
-                'estado' => 'sometimes|string|max:191',
-                'fecha_nombramiento' => 'sometimes|date',
+                'estado' => 'sometimes|numeric',
                 'nombre_nombrado' => 'sometimes|string|max:191',
                 'descripcion_servicio' => 'sometimes|string|max:500',
                 'orden' => 'sometimes|string|max:191',
                 'institucion_id' => 'sometimes|exists:instituciones,id',
-                'area_id' => 'sometimes|nullable|exists:institucion_area,id',
                 'cv_id' => 'sometimes|nullable|exists:cv_banks,id',
                 'modalidad_posicion' => 'nullable|integer',
                 'continuidad_id' => 'sometimes|exists:puesto_continuidad,id',
                 'permanencia_id' => 'sometimes|exists:puesto_permanencia,id',
                 'modalidad' => 'sometimes|string|max:191',
-                'fecha_limite' => 'sometimes|date',
+                'fecha_nombramiento' => 'sometimes|nullable|date',
+                'fecha_limite' => 'sometimes|nullable|date',
                 'dias_restantes' => 'sometimes|integer',
                 'perfil' => 'sometimes|string',
                 'observaciones' => 'sometimes|string',
@@ -121,7 +117,6 @@ class InstitucionesPuestoController extends Controller
                 'descripcion_servicio',
                 'orden',
                 'institucion_id',
-                'area_id',
                 'cv_id',
                 'modalidad_posicion',
                 'continuidad_id',
@@ -151,36 +146,27 @@ class InstitucionesPuestoController extends Controller
             return response()->json(['error' => 'Error al procesar el puesto: ' . $e->getMessage()], 500);
         }
     }
+
     public function destroy($id)
     {
-        // Inicia la transacción
         DB::beginTransaction();
         try {
-            DB::table('area_puestos')->where('id', $id)->update([
-                'codigo' => null,
-                'nombre' => null,
-                'telefono' => null,
-                'email' => null,
-                'formacion' => null,
-                'capacitacion' => null,
-                'experiencia_especifica' => null,
-                'experiencia_general' => null,
-                'fecha_nombramiento' => null,
-                'nombre_nombrado' => null,
-                'estado' => null,
-                'modalidad_posicion' => null,
-                'sueldo_promedio' => null,
-                'nivel' => null,
-                'dependencia' => null,
-                'nivel_perfil' => null,
-            ]);
+            // Verificar si el registro existe
+            $puesto = DB::table('area_puestos')->where('id', $id)->first();
+            if (!$puesto) {
+                DB::rollBack();
+                return response()->json(['message' => 'Puesto no encontrado'], 404);
+            }
+
+            // Eliminar el registro
+            $affectedRows = DB::table('area_puestos')->where('id', $id)->delete();
+            
+            // Confirmar la transacción
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al eliminar el puesto'
-                . $e->getMessage()], 500);
+            return response()->json(['message' => 'Error al eliminar el puesto: ' . $e->getMessage()], 500);
         }
-
 
         return response()->json(null, 204);
     }
@@ -197,11 +183,11 @@ class InstitucionesPuestoController extends Controller
             $data = DB::table('cv_banks as cv')
                 ->leftJoin('area_puestos as ap', 'cv.id', '=', 'ap.cv_id')
                 ->leftJoin('institucion_area as ia', 'ap.area_id', '=', 'ia.id')
-                ->leftJoin('instituciones as i', 'ia.institucion_id', '=', 'i.id')
+                ->leftJoin('instituciones as i', 'ap.institucion_id', '=', 'i.id')
                 ->select(
                     'cv.estado_actual_id as estado_postulante',
-                    'cv.color_id',
                     'ap.estado as estado_puesto',
+                    'ap.modalidad as color', //Color
                     'ap.dias_restantes',
                     'ap.continuidad_id',
                     'cv.code as codigo_postulante',
@@ -210,8 +196,13 @@ class InstitucionesPuestoController extends Controller
                     'ap.nombre as objeto_orden',
                     'ap.salario_minimo as salario',
                     'ap.fecha_limite',
+                    'ap.nombre as objeto_servicio',
+                    'ap.sueldo_promedio as monto_total',
                     'ap.fecha_nombramiento as fecha_ingreso',
-                    DB::raw("CONCAT(i.codigo,'-', ia.nombre) as area"),
+                    'ap.codigo as codigo',
+                    'i.nombre as nombre_institucion',
+                    'i.direccion as dependencia',
+                    DB::raw("CONCAT(ap.codigo, ' - ', i.nombre) as area"),
                 )
                 ->where('cv.id', $postulante_id)
                 ->get();
@@ -221,6 +212,7 @@ class InstitucionesPuestoController extends Controller
             return response()->json(['message' => 'Error al obtener los puestos'], 500);
         }
     }
+
     public function storeControlPuestos(Request $request)
     {
         try {

@@ -5,22 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\CvBank;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use App\Http\Controllers\bcrypt;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-
 class CvBankController extends Controller
 {
-
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request, $domain_id)
     {
         $cvBanks = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')
-            ->where('domain_id', $domain_id) // Filtrar por domain_id
+            ->where('domain_id', $domain_id)
             ->byTerm($request->term)
             ->byProfessionId($request->profession_id)
             ->byEducationDegreeId($request->education_degree_id)
@@ -29,8 +27,6 @@ class CvBankController extends Controller
 
         return response()->json($cvBanks, 200);
     }
-
-
 
     public function filtersData()
     {
@@ -57,7 +53,7 @@ class CvBankController extends Controller
             'scales' => \App\Models\Escala::where('domain_id', $domain_id)->get(),
             'actions' => \App\Models\AccionOi::where('domain_id', $domain_id)->get(),
             'training_types' => \App\Models\TipoCapacitacion::where('domain_id', $domain_id)->get(),
-            'ocupacion_actual' => \App\Models\OcupacionActual::where('domain_id', $domain_id)->get(), // Nueva línea para ocupacion_actual
+            'ocupacion_actual' => \App\Models\OcupacionActual::where('domain_id', $domain_id)->get(),
         ];
 
         return response()->json($data, 200);
@@ -65,10 +61,9 @@ class CvBankController extends Controller
 
     private function generateCodigoConcursante($domain_id)
     {
-        $count = \App\Models\CvBank\CvBank::where('domain_id', $domain_id)->count();
+        $count = \App\Models\CvBank::where('domain_id', $domain_id)->count();
         return 'CNC-' . str_pad($count + 1, 5, '0', STR_PAD_LEFT);
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -76,8 +71,8 @@ class CvBankController extends Controller
     public function store(Request $request)
     {
         $this->validate($request, [
-            'identification_number' => 'required|string|max:100', // DNI es obligatorio
-            'password' => 'required|string|min:6', // Password es obligatorio
+            'identification_number' => 'required|string|max:100',
+            'password' => 'required|string|min:6',
             'position_code' => 'nullable|string|max:100',
             'code' => 'nullable|string|max:100',
             'identification_document_id' => 'nullable|integer',
@@ -90,19 +85,24 @@ class CvBankController extends Controller
             'education_degree_id' => 'nullable|integer',
             'profession_id' => 'nullable|integer',
             'ocupacion_actual_id' => 'nullable|integer',
-            'email' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:100',
             'sex' => 'nullable|string|max:1',
             'estado_actual_id' => 'nullable|integer',
             'domain_id' => 'required|integer|exists:domains,id',
-            'imagen' => 'nullable|string', // Cambiado para base64
-            'nombre_archivo' => 'nullable|string|max:255', // Para el nombre del archivo
+            'imagen' => 'nullable|string',
+            'nombre_archivo' => 'nullable|string|max:255',
+            'link_facebook' => 'nullable|string|max:255',
+            'link_instagram' => 'nullable|string|max:255',
+            'link_tik_tok' => 'nullable|string|max:255',
         ]);
 
         try {
-            // Verificar usuarios existentes
-            $userExist = \App\Models\User::where('email', $request->input('email'))->first();
-            if ($userExist) {
-                return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+            // Validate unique email and DNI
+            if ($request->filled('email')) {
+                $userExist = \App\Models\User::where('email', $request->input('email'))->first();
+                if ($userExist) {
+                    return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+                }
             }
 
             $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->first();
@@ -110,39 +110,32 @@ class CvBankController extends Controller
                 return response()->json(['message' => 'El DNI ya está en uso'], 400);
             }
 
-            // Procesar la imagen base64 si existe
+            // Process base64 image if provided
             $imagePath = null;
             if ($request->filled('imagen')) {
-                // Obtener datos base64 y nombre del archivo
                 $base64Image = $request->input('imagen');
                 $fileName = $request->input('nombre_archivo') ?: 'profile-' . time() . '.jpg';
-
-                // Generar nombre único de archivo
                 $imageName = time() . '-' . str_replace(' ', '-', $fileName);
-
-                // Definir directorio
                 $directory = 'cv_banks';
-                $uploadPath = public_path('uploads/' . $directory);
+                $uploadPath = base_path('public/uploads/' . $directory); // Use base_path for Lumen
 
-                // Crear directorio si no existe
+                // Create directory if it doesn't exist
                 if (!file_exists($uploadPath)) {
                     mkdir($uploadPath, 0755, true);
                 }
 
-                // Guardar archivo
+                // Save image
                 $filePath = $uploadPath . '/' . $imageName;
                 file_put_contents($filePath, base64_decode($base64Image));
-
-                // Guardar ruta relativa
                 $imagePath = 'uploads/' . $directory . '/' . $imageName;
             }
 
-            // Crear usuario
+            // Create user
             $user = new \App\Models\User([
                 'name' => $request->input('names'),
                 'email' => $request->input('email'),
                 'dni' => $request->input('identification_number'),
-                'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+                'password' => Hash::make($request->input('password')),
                 'domain_id' => $request->input('domain_id'),
                 'rol_id' => 21,
                 'type' => 'user',
@@ -151,7 +144,7 @@ class CvBankController extends Controller
 
             $user->save();
 
-            // Crear registro en cv_banks
+            // Create CvBank record
             $cvBankData = [
                 'position_code' => $request->input('position_code'),
                 'code' => $request->input('code'),
@@ -168,7 +161,7 @@ class CvBankController extends Controller
                 'ocupacion_actual_id' => $request->input('ocupacion_actual_id'),
                 'email' => $request->input('email'),
                 'sex' => $request->input('sex'),
-                'date_affiliation' => date('Y-m-d'),
+                'date_affiliation' => $request->input('date_affiliation') ?? date('Y-m-d'),
                 'estado_actual_id' => $request->input('estado_actual_id'),
                 'domain_id' => $request->input('domain_id'),
                 'user_id' => $user->id,
@@ -176,16 +169,12 @@ class CvBankController extends Controller
                 'link_facebook' => $request->input('link_facebook'),
                 'link_instagram' => $request->input('link_instagram'),
                 'link_tik_tok' => $request->input('link_tik_tok'),
+                'image' => $imagePath,
             ];
-
-            // Añadir la ruta de la imagen si existe
-            if ($imagePath) {
-                $cvBankData['image'] = $imagePath;
-            }
 
             $cvBank = CvBank::create($cvBankData);
 
-            // Actualizar relación con el usuario
+            // Update user with postulante_id
             $user->update(['postulante_id' => $cvBank->id]);
 
             return response()->json(['cvBank' => $cvBank], 201);
@@ -200,13 +189,53 @@ class CvBankController extends Controller
      */
     public function show($id)
     {
-        $cvBank = DB::table('cv_banks')->where('cv_banks.id', $id)->leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')->leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')->leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')->leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')->leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')->select('cv_banks.*', 'domains.nombre as domain', 'estado_civil.nombre as marital_status', 'grado_instruccion.nombre as education_degree', 'estado_actual.nombre as estado_actual', 'doc_identidad.nombre as identification_document')->first();
+        $cvBank = DB::table('cv_banks')
+            ->where('cv_banks.id', $id)
+            ->leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')
+            ->leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')
+            ->leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')
+            ->leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')
+            ->leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')
+            ->select(
+                'cv_banks.*',
+                'domains.nombre as domain',
+                'estado_civil.nombre as marital_status',
+                'grado_instruccion.nombre as education_degree',
+                'estado_actual.nombre as estado_actual',
+                'doc_identidad.nombre as identification_document'
+            )
+            ->first();
+
+        // Convert image to Base64 for frontend
+        if ($cvBank && $cvBank->image) {
+            $imagePath = base_path('public/' . $cvBank->image); // Use base_path for Lumen
+            if (file_exists($imagePath)) {
+                $cvBank->image = base64_encode(file_get_contents($imagePath));
+                $cvBank->nombre_archivo = basename($cvBank->image);
+            } else {
+                $cvBank->image = null;
+                $cvBank->nombre_archivo = null;
+            }
+        }
+
         return response()->json(['cvBank' => $cvBank]);
     }
 
     public function showByUser($id)
     {
         $cvBank = CvBank::where('user_id', $id)->first();
+
+        // Convert image to Base64 for frontend
+        if ($cvBank && $cvBank->image) {
+            $imagePath = base_path('public/' . $cvBank->image); // Use base_path for Lumen
+            if (file_exists($imagePath)) {
+                $cvBank->image = base64_encode(file_get_contents($imagePath));
+                $cvBank->nombre_archivo = basename($cvBank->image);
+            } else {
+                $cvBank->image = null;
+                $cvBank->nombre_archivo = null;
+            }
+        }
 
         return response()->json(['cvBank' => $cvBank]);
     }
@@ -217,27 +246,30 @@ class CvBankController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            // Modify validation rules for base64 image
             $validator = Validator::make($request->all(), [
-                'position_code' => 'required|string|max:100',
+                'position_code' => 'nullable|string|max:100',
                 'code' => 'required|string|max:100',
-                'identification_document_id' => 'required|integer',
-                'identification_number' => 'string|max:100',
-                'names' => 'string|max:100',
+                'identification_document_id' => 'nullable|integer',
+                'identification_number' => 'required|string|max:100',
+                'names' => 'nullable|string|max:100',
                 'phone' => 'nullable|string|max:20',
-                'marital_status_id' => 'required|integer',
+                'marital_status_id' => 'nullable|integer',
                 'number_children' => 'nullable|integer',
-                'date_birth' => 'date',
-                'age' => 'required|integer',
-                'education_degree_id' => 'required|integer',
+                'date_birth' => 'nullable|date',
+                'age' => 'nullable|integer',
+                'education_degree_id' => 'nullable|integer',
                 'profession_id' => 'nullable|integer',
-                'email' => 'nullable|string|max:100',
+                'ocupacion_actual_id' => 'nullable|integer',
+                'email' => 'nullable|email|max:100',
+                'sex' => 'nullable|string|max:1',
+                'estado_actual_id' => 'nullable|integer',
+                'domain_id' => 'required|integer|exists:domains,id',
                 'color_id' => 'nullable|integer',
                 'link_facebook' => 'nullable|string|max:255',
                 'link_instagram' => 'nullable|string|max:255',
                 'link_tik_tok' => 'nullable|string|max:255',
-                'imagen' => 'nullable|string', // Changed to string for base64
-                'nombre_archivo' => 'nullable|string|max:255', // For the filename
+                'imagen' => 'nullable|string',
+                'nombre_archivo' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -247,41 +279,35 @@ class CvBankController extends Controller
             $cvBank = CvBank::findOrFail($id);
             $data = $request->except(['imagen', 'nombre_archivo', 'password']);
 
-            // Process base64 image if it exists
+            // Process base64 image if provided
             if ($request->filled('imagen')) {
-                // Get base64 string and file name
                 $base64Image = $request->input('imagen');
                 $fileName = $request->input('nombre_archivo') ?: 'profile-' . time() . '.jpg';
-
-                // Generate a unique file name
                 $imageName = time() . '-' . str_replace(' ', '-', $fileName);
-
-                // Define the directory
                 $directory = 'cv_banks';
-                $uploadPath = public_path('uploads/' . $directory);
+                $uploadPath = base_path('public/uploads/' . $directory); // Use base_path for Lumen
 
                 // Create directory if it doesn't exist
                 if (!file_exists($uploadPath)) {
                     mkdir($uploadPath, 0755, true);
                 }
 
-                // Save the file to diskg
+                // Save image
                 $filePath = $uploadPath . '/' . $imageName;
                 file_put_contents($filePath, base64_decode($base64Image));
-
-                // Save the relative path to database
                 $data['image'] = 'uploads/' . $directory . '/' . $imageName;
             }
 
-            // Validar email único
-            $userExist = \App\Models\User::where('email', $request->input('email'))
-                ->where('postulante_id', '!=', $cvBank->id)
-                ->first();
-            if ($userExist) {
-                return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+            // Validate unique email and DNI
+            if ($request->filled('email')) {
+                $userExist = \App\Models\User::where('email', $request->input('email'))
+                    ->where('postulante_id', '!=', $cvBank->id)
+                    ->first();
+                if ($userExist) {
+                    return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+                }
             }
 
-            // Validar DNI único
             $userExist = \App\Models\User::where('dni', $request->input('identification_number'))
                 ->where('postulante_id', '!=', $cvBank->id)
                 ->first();
@@ -289,9 +315,10 @@ class CvBankController extends Controller
                 return response()->json(['message' => 'El DNI ya está en uso'], 400);
             }
 
+            // Update CvBank
             $cvBank->update($data);
 
-            // Actualizar o crear usuario asociado
+            // Update or create associated user
             $userData = [
                 'name' => $request->input('names'),
                 'email' => $request->input('email'),
@@ -303,9 +330,9 @@ class CvBankController extends Controller
                 'postulante_id' => $cvBank->id
             ];
 
-            // Solo actualizar password si se proporcionó
-            if ($request->filled('password')) {
-                $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->input('password'));
+            // Only update password if provided and not the placeholder
+            if ($request->filled('password') && $request->input('password') !== '********') {
+                $userData['password'] = Hash::make($request->input('password'));
             }
 
             $user = \App\Models\User::find($cvBank->user_id);
