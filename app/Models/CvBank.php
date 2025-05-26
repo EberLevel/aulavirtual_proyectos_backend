@@ -61,6 +61,11 @@ class CvBank extends Model
         return $this->hasMany(Reference::class, 'cv_bank_id');
     }
 
+    public function areaPuestos()
+    {
+        return $this->hasMany(AreaPuesto::class, 'cv_id', 'id');
+    }
+
     public function academic_formations()
     {
         return $this->hasMany(AcademicFormation::class, 'cv_bank_id');

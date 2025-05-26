@@ -17,13 +17,56 @@ class CvBankController extends Controller
      */
     public function index(Request $request, $domain_id)
     {
+        // Obtener los registros de CvBank con los filtros
         $cvBanks = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')
             ->where('domain_id', $domain_id)
             ->byTerm($request->term)
             ->byProfessionId($request->profession_id)
             ->byEducationDegreeId($request->education_degree_id)
             ->byCurrentStateId($request->current_state_id)
-            ->paginate(10);
+            ->get();
+
+        // Mapear los resultados para agregar la subconsulta de getControlPuestos
+        $cvBanks->getCollection()->transform(function ($cvBank) {
+            try {
+                // Reutilizar la lógica de getControlPuestos
+                $data = DB::table('cv_banks as cv')
+                    ->leftJoin('area_puestos as ap', 'cv.id', '=', 'ap.cv_id')
+                    ->leftJoin('institucion_area as ia', 'ap.area_id', '=', 'ia.id')
+                    ->leftJoin('instituciones as i', 'ap.institucion_id', '=', 'i.id')
+                    ->select(
+                        'cv.estado_actual_id as estado_postulante',
+                        'ap.estado as estado_puesto',
+                        'ap.modalidad as color',
+                        'ap.dias_restantes',
+                        'ap.continuidad_id',
+                        'cv.code as codigo_postulante',
+                        'cv.id as postulante_id',
+                        'ap.orden as n_orden',
+                        'ap.nombre as objeto_orden',
+                        'ap.salario_minimo as salario',
+                        'ap.fecha_limite',
+                        'ap.nombre as objeto_servicio',
+                        'ap.sueldo_promedio as monto_total',
+                        'ap.fecha_nombramiento as fecha_ingreso',
+                        'ap.codigo as codigo',
+                        'i.nombre as nombre_institucion',
+                        'i.direccion as dependencia',
+                        DB::raw("CONCAT(ap.codigo, ' - ', i.nombre) as area")
+                    )
+                    ->where('cv.id', $cvBank->id)
+                    ->get();
+
+                // Agregar los datos de la subconsulta como un atributo adicional
+                $cvBank->control_puestos = $data;
+            } catch (\Exception $e) {
+                // Manejo de errores: registrar el error y asignar un array vacío o mensaje
+                Log::error('Error al obtener los puestos para postulante ' . $cvBank->id . ': ' . $e->getMessage());
+                $cvBank->control_puestos = [];
+            }
+
+            return $cvBank;
+        });
 
         return response()->json($cvBanks, 200);
     }

@@ -173,8 +173,19 @@ class InstitucionesPuestoController extends Controller
     public function getLastId()
     {
         $puesto = DB::table('area_puestos')->orderBy('id', 'desc')->first();
-        $id = str_pad($puesto->id + 1, 6, "0", STR_PAD_LEFT);
-        return response()->json($id);
+
+        if ($puesto && !empty($puesto->codigo)) {
+            // Extraer el número del código (remover el prefijo 'PP' si existe)
+            $lastCode = preg_replace('/[^0-9]/', '', $puesto->codigo); // Obtiene solo los dígitos
+            $nextNumber = (int)$lastCode + 1;
+            // Formatear el nuevo código con 'PP' + 7 dígitos
+            $newCode = 'PP' . str_pad($nextNumber, 7, '0', STR_PAD_LEFT);
+        } else {
+            // Si no hay registros, empezar con PP0000001
+            $newCode = 'PP0000001';
+        }
+
+        return response()->json($newCode);
     }
     public function getControlPuestos($postulante_id)
     {
@@ -187,7 +198,7 @@ class InstitucionesPuestoController extends Controller
                 ->select(
                     'cv.estado_actual_id as estado_postulante',
                     'ap.estado as estado_puesto',
-                    'ap.modalidad as color', //Color
+                    'ap.modalidad as color',
                     'ap.dias_restantes',
                     'ap.continuidad_id',
                     'cv.code as codigo_postulante',
