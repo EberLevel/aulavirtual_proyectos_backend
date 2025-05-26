@@ -24,7 +24,7 @@ class CvBankController extends Controller
             ->byProfessionId($request->profession_id)
             ->byEducationDegreeId($request->education_degree_id)
             ->byCurrentStateId($request->current_state_id)
-            ->get();
+            ->paginate(100000000);
 
         // Mapear los resultados para agregar la subconsulta de getControlPuestos
         $cvBanks->getCollection()->transform(function ($cvBank) {
