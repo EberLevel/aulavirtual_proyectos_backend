@@ -198,7 +198,7 @@ class InstitucionesPuestoController extends Controller
                 ->select(
                     'cv.estado_actual_id as estado_postulante',
                     'ap.estado as estado_puesto',
-                    'ap.modalidad as color',
+                    'ap.modalidad_posicion as color',
                     'ap.dias_restantes',
                     'ap.continuidad_id',
                     'cv.code as codigo_postulante',
