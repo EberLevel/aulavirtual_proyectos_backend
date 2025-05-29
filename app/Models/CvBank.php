@@ -3,21 +3,18 @@
 namespace App\Models;
 
 use App\Models\AcademicFormation;
-use App\Models\Capacitacion; // Ensure this model exists or correct the namespace if necessary
+use App\Models\Capacitacion;
 use App\Models\DocIdentidad;
 use App\Models\EstadoActual;
 use App\Models\EstadoCivil;
 use App\Models\GradoInstruccion;
-use App\Models\Maintenance\Profession;
-
 use App\Models\Profesion;
 use App\Models\Reference;
 use App\Models\WorkExperience;
 use App\Models\Domains;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
-
 
 class CvBank extends Model
 {
@@ -26,13 +23,15 @@ class CvBank extends Model
     protected $table = 'cv_banks';
 
     protected $fillable = [
-        'id',
         'user_id',
         'position_code',
         'code',
         'identification_document_id',
         'identification_number',
-        'image', // Campo para almacenar la cadena Base64
+        'image', // Stores file path
+        'nombre_imagen', // Stores image file name
+        'cv_path', // Stores CV file path
+        'nombre_cv', // Stores CV file name
         'names',
         'phone',
         'marital_status_id',
@@ -41,21 +40,20 @@ class CvBank extends Model
         'age',
         'education_degree_id',
         'profession_id',
+        'ocupacion_actual_id',
         'email',
         'urls',
         'sex',
         'date_affiliation',
         'estado_actual_id',
-        'training_type_id',
         'domain_id',
         'color_id',
         'link_facebook',
         'link_instagram',
-        'link_tik_tok'
+        'link_tik_tok',
     ];
 
-    // Relaciones con otras tablas
-
+    // Relationships
     public function references()
     {
         return $this->hasMany(Reference::class, 'cv_bank_id');
@@ -100,6 +98,7 @@ class CvBank extends Model
     {
         return $this->belongsTo(GradoInstruccion::class, 'education_degree_id');
     }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -115,8 +114,7 @@ class CvBank extends Model
         return $this->belongsTo(Domains::class, 'domain_id');
     }
 
-    // Scopes para filtrar los resultados
-
+    // Scopes for filtering
     public function scopeByTerm($query, $term)
     {
         if ($term) {

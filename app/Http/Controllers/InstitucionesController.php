@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CvBank\CvBank;
+use App\Models\CvBank;
 use Illuminate\Http\Request;
 use App\Models\Institucion; // Asegúrate de crear el modelo correspondiente
 use Illuminate\Support\Facades\Validator;

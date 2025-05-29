@@ -3,21 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\CvBank;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class CvBankController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request, $domain_id)
     {
-        // Obtener los registros de CvBank con los filtros
         $cvBanks = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')
             ->where('domain_id', $domain_id)
             ->byTerm($request->term)
@@ -26,10 +24,8 @@ class CvBankController extends Controller
             ->byCurrentStateId($request->current_state_id)
             ->paginate(100000000);
 
-        // Mapear los resultados para agregar la subconsulta de getControlPuestos
         $cvBanks->getCollection()->transform(function ($cvBank) {
             try {
-                // Reutilizar la lógica de getControlPuestos
                 $data = DB::table('cv_banks as cv')
                     ->leftJoin('area_puestos as ap', 'cv.id', '=', 'ap.cv_id')
                     ->leftJoin('institucion_area as ia', 'ap.area_id', '=', 'ia.id')
@@ -57,12 +53,14 @@ class CvBankController extends Controller
                     ->where('cv.id', $cvBank->id)
                     ->get();
 
-                // Agregar los datos de la subconsulta como un atributo adicional
                 $cvBank->control_puestos = $data;
+                $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
+                $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
             } catch (\Exception $e) {
-                // Manejo de errores: registrar el error y asignar un array vacío o mensaje
-                Log::error('Error al obtener los puestos para postulante ' . $cvBank->id . ': ' . $e->getMessage());
+                Log::error('Error fetching control puestos for CV Bank ID ' . $cvBank->id . ': ' . $e->getMessage());
                 $cvBank->control_puestos = [];
+                $cvBank->image_url = null;
+                $cvBank->cv_url = null;
             }
 
             return $cvBank;
@@ -104,85 +102,91 @@ class CvBankController extends Controller
 
     private function generateCodigoConcursante($domain_id)
     {
-        $count = \App\Models\CvBank::where('domain_id', $domain_id)->count();
+        $count = CvBank::where('domain_id', $domain_id)->count();
         return 'CNC-' . str_pad($count + 1, 5, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         try {
-            // Validar los datos de entrada
+            // Log all incoming data for debugging
+            Log::info('Raw POST data:', ['input' => $request->all(), 'files' => $request->files->all()]);
+
+            // Validate input data
             $validator = Validator::make($request->all(), [
                 'identification_number' => 'required|string|max:100',
                 'password' => 'required|string|min:6',
                 'position_code' => 'nullable|string|max:100',
                 'code' => 'nullable|string|max:100',
-                'identification_document_id' => 'nullable|integer',
+                'identification_document_id' => 'nullable|numeric', // Cambiado a numeric para aceptar strings
                 'names' => 'nullable|string|max:100',
                 'phone' => 'nullable|string|max:20',
-                'marital_status_id' => 'nullable|integer',
-                'number_children' => 'nullable|integer',
+                'marital_status_id' => 'nullable|numeric',
+                'number_children' => 'nullable|numeric',
                 'date_birth' => 'nullable|date',
-                'age' => 'nullable|integer',
-                'education_degree_id' => 'nullable|integer',
-                'profession_id' => 'nullable|integer',
-                'ocupacion_actual_id' => 'nullable|integer', // Asegura que este campo sea permitido
+                'age' => 'nullable|numeric',
+                'education_degree_id' => 'nullable|numeric',
+                'profession_id' => 'nullable|numeric',
+                'ocupacion_actual_id' => 'nullable|numeric',
                 'email' => 'nullable|email|max:100',
-                'sex' => 'nullable|string|max:1',
-                'estado_actual_id' => 'nullable|integer',
-                'domain_id' => 'required|integer|exists:domains,id',
-                'color_id' => 'nullable|integer',
+                'sex' => 'nullable|string|max:10',
+                'estado_actual_id' => 'nullable|numeric',
+                'domain_id' => 'required|numeric|exists:domains,id', // Cambiado a numeric
+                'color_id' => 'nullable|numeric',
                 'link_facebook' => 'nullable|string|max:255',
                 'link_instagram' => 'nullable|string|max:255',
                 'link_tik_tok' => 'nullable|string|max:255',
-                'image' => 'nullable|string',
-                'nombre_archivo' => 'nullable|string|max:255',
+                'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
+                'nombre_imagen' => 'nullable|string|max:255',
+                'cv' => 'nullable|file|mimes:pdf|max:5120',
+                'nombre_cv' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
-                Log::error('Errores de validación:', $validator->errors()->toArray());
+                Log::error('Validation errors:', $validator->errors()->toArray());
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            Log::info('Datos recibidos en store:', $request->all());
+            Log::info('Validated data:', $request->all());
 
-            // Verificar usuarios existentes (omitir si email es null)
+            // Check for existing email (if provided)
             if ($request->filled('email')) {
-                $userExist = \App\Models\User::where('email', $request->input('email'))->first();
+                $userExist = User::where('email', $request->input('email'))->first();
                 if ($userExist) {
                     return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
                 }
             }
 
-            // Verificar unicidad de DNI
-            $userExist = \App\Models\User::where('dni', $request->input('identification_number'))->first();
+            // Check for existing DNI
+            $userExist = User::where('dni', $request->input('identification_number'))->first();
             if ($userExist) {
                 return response()->json(['message' => 'El DNI ya está en uso'], 400);
             }
 
-            // Validar la cadena base64 si existe
-            if ($request->filled('image')) {
-                $base64Image = $request->input('image');
-                Log::info('Procesando imagen base64:', ['image_length' => strlen($base64Image)]);
-
-                // Verificar si la cadena base64 es válida
-                if (base64_decode($base64Image, true) === false) {
-                    Log::error('Cadena base64 inválida');
-                    return response()->json(['message' => 'La cadena base64 de la imagen no es válida'], 400);
-                }
-            } else {
-                Log::info('No se recibió ninguna imagen en la solicitud');
+            // Handle image upload
+            $imagePath = null;
+            $nombreImagen = null;
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('uploads', 'public');
+                $nombreImagen = $request->file('image')->getClientOriginalName();
+                Log::info('Image uploaded:', ['path' => $imagePath, 'name' => $nombreImagen]);
             }
 
-            // Crear usuario
-            $user = new \App\Models\User([
+            // Handle CV upload
+            $cvPath = null;
+            $nombreCv = null;
+            if ($request->hasFile('cv')) {
+                $cvPath = $request->file('cv')->store('uploads', 'public');
+                $nombreCv = $request->file('cv')->getClientOriginalName();
+                Log::info('CV uploaded:', ['path' => $cvPath, 'name' => $nombreCv]);
+            }
+
+            // Create user
+            $user = new User([
                 'name' => $request->input('names'),
                 'email' => $request->input('email'),
                 'dni' => $request->input('identification_number'),
-                'password' => \Illuminate\Support\Facades\Hash::make($request->input('password')),
+                'password' => Hash::make($request->input('password')),
                 'domain_id' => $request->input('domain_id'),
                 'rol_id' => 21,
                 'type' => 'user',
@@ -191,12 +195,16 @@ class CvBankController extends Controller
 
             $user->save();
 
-            // Crear registro en cv_banks
+            // Create CvBank record
             $cvBankData = [
                 'position_code' => $request->input('position_code'),
                 'code' => $request->input('code') ?: $this->generateCodigoConcursante($request->input('domain_id')),
                 'identification_document_id' => $request->input('identification_document_id'),
                 'identification_number' => $request->input('identification_number'),
+                'image' => $imagePath,
+                'nombre_imagen' => $nombreImagen,
+                'cv_path' => $cvPath,
+                'nombre_cv' => $nombreCv,
                 'names' => $request->input('names'),
                 'phone' => $request->input('phone'),
                 'marital_status_id' => $request->input('marital_status_id'),
@@ -205,10 +213,10 @@ class CvBankController extends Controller
                 'age' => $request->input('age'),
                 'education_degree_id' => $request->input('education_degree_id'),
                 'profession_id' => $request->input('profession_id'),
-                'ocupacion_actual_id' => $request->input('ocupacion_actual_id'), // Asegura que se incluya
+                'ocupacion_actual_id' => $request->input('ocupacion_actual_id'),
                 'email' => $request->input('email'),
                 'sex' => $request->input('sex'),
-                'date_affiliation' => date('Y-m-d'),
+                'date_affiliation' => $request->input('date_affiliation') ?: date('Y-m-d'),
                 'estado_actual_id' => $request->input('estado_actual_id'),
                 'domain_id' => $request->input('domain_id'),
                 'user_id' => $user->id,
@@ -216,217 +224,210 @@ class CvBankController extends Controller
                 'link_facebook' => $request->input('link_facebook'),
                 'link_instagram' => $request->input('link_instagram'),
                 'link_tik_tok' => $request->input('link_tik_tok'),
+                'urls' => $request->input('urls'),
             ];
 
-            // Asignar la cadena base64 al campo image si existe
-            if ($request->filled('image')) {
-                $cvBankData['image'] = $request->input('image');
-                Log::info('Cadena base64 asignada a cvBankData:', ['image_length' => strlen($cvBankData['image'])]);
-            }
-
             $cvBank = CvBank::create($cvBankData);
-            Log::info('Registro creado en cv_banks:', $cvBank->toArray());
+            Log::info('Created CvBank record:', $cvBank->toArray());
 
-            // Actualizar relación con el usuario
+            // Update user with postulante_id
             $user->update(['postulante_id' => $cvBank->id]);
+
+            // Add file URLs to response
+            $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
+            $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
 
             return response()->json(['cvBank' => $cvBank], 201);
         } catch (\Exception $e) {
-            Log::error('Error al crear postulante: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al crear el postulante: ' . $e->getMessage()], 500);
+            Log::error('Error creating postulante: ' . $e->getMessage());
+            return response()->json(['message' => 'Error creating postulante: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
-        $cvBank = DB::table('cv_banks')
-            ->where('cv_banks.id', $id)
-            ->leftJoin('domains', 'cv_banks.domain_id', '=', 'domains.id')
-            ->leftJoin('estado_civil', 'cv_banks.marital_status_id', '=', 'estado_civil.id')
-            ->leftJoin('grado_instruccion', 'cv_banks.education_degree_id', '=', 'grado_instruccion.id')
-            ->leftJoin('estado_actual', 'cv_banks.estado_actual_id', '=', 'estado_actual.id')
-            ->leftJoin('doc_identidad', 'cv_banks.identification_document_id', '=', 'doc_identidad.id')
-            ->select(
-                'cv_banks.*',
-                'domains.nombre as domain',
-                'estado_civil.nombre as marital_status',
-                'grado_instruccion.nombre as education_degree',
-                'estado_actual.nombre as estado_actual',
-                'doc_identidad.nombre as identification_document'
-            )
-            ->first();
+        try {
+            $cvBank = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain')
+                ->where('id', $id)
+                ->first();
 
-        // Convert image to Base64 for frontend
-        if ($cvBank && $cvBank->image) {
-            $imagePath = base_path('public/' . $cvBank->image); // Use base_path for Lumen
-            if (file_exists($imagePath)) {
-                $cvBank->image = base64_encode(file_get_contents($imagePath));
-                $cvBank->nombre_archivo = basename($cvBank->image);
-            } else {
-                $cvBank->image = null;
-                $cvBank->nombre_archivo = null;
+            if (!$cvBank) {
+                return response()->json(['message' => 'Banco de CV no encontrado'], 404);
             }
-        }
 
-        return response()->json(['cvBank' => $cvBank]);
+            $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
+            $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
+
+            return response()->json(['cvBank' => $cvBank], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching CV Bank ID ' . $id . ': ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching CV Bank: ' . $e->getMessage()], 500);
+        }
     }
 
     public function showByUser($id)
     {
-        $cvBank = CvBank::where('user_id', $id)->first();
+        try {
+            $cvBank = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain')
+                ->where('user_id', $id)
+                ->first();
 
-        // Convert image to Base64 for frontend
-        if ($cvBank && $cvBank->image) {
-            $imagePath = base_path('public/' . $cvBank->image); // Use base_path for Lumen
-            if (file_exists($imagePath)) {
-                $cvBank->image = base64_encode(file_get_contents($imagePath));
-                $cvBank->nombre_archivo = basename($cvBank->image);
-            } else {
-                $cvBank->image = null;
-                $cvBank->nombre_archivo = null;
+            if (!$cvBank) {
+                return response()->json(['message' => 'Banco de CV no encontrado para el usuario'], 404);
             }
-        }
 
-        return response()->json(['cvBank' => $cvBank]);
+            $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
+            $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
+
+            return response()->json(['cvBank' => $cvBank], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching CV Bank for user ID ' . $id . ': ' . $e->getMessage());
+            return response()->json(['message' => 'Error fetching CV Bank: ' . $e->getMessage()], 500);
+        }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-public function update(Request $request, $id)
-{
-    try {
-        // Validar los datos de entrada
-        $validator = Validator::make($request->all(), [
-            'position_code' => 'nullable|string|max:100',
-            'code' => 'required|string|max:100',
-            'identification_document_id' => 'nullable|integer',
-            'identification_number' => 'required|string|max:100',
-            'names' => 'nullable|string|max:100',
-            'phone' => 'nullable|string|max:20',
-            'marital_status_id' => 'nullable|integer',
-            'number_children' => 'nullable|integer',
-            'date_birth' => 'nullable|date',
-            'age' => 'nullable|integer',
-            'education_degree_id' => 'nullable|integer',
-            'profession_id' => 'nullable|integer',
-            'ocupacion_actual_id' => 'nullable|integer',
-            'email' => 'nullable|email|max:100',
-            'sex' => 'nullable|string|max:1',
-            'estado_actual_id' => 'nullable|integer',
-            'domain_id' => 'required|integer|exists:domains,id',
-            'color_id' => 'nullable|integer',
-            'link_facebook' => 'nullable|string|max:255',
-            'link_instagram' => 'nullable|string|max:255',
-            'link_tik_tok' => 'nullable|string|max:255',
-            'image' => 'nullable|string',
-            'nombre_archivo' => 'nullable|string|max:255',
-            'password' => 'nullable|string|min:6',
-        ]);
+    public function update(Request $request, $id)
+    {
+        try {
+            Log::info('Raw POST data for update:', ['input' => $request->all(), 'files' => $request->files->all()]);
 
-        if ($validator->fails()) {
-            Log::error('Errores de validación:', $validator->errors()->toArray());
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+            $validator = Validator::make($request->all(), [
+                'position_code' => 'nullable|string|max:100',
+                'code' => 'required|string|max:100',
+                'identification_document_id' => 'nullable|numeric',
+                'identification_number' => 'required|string|max:100',
+                'names' => 'nullable|string|max:100',
+                'phone' => 'nullable|string|max:20',
+                'marital_status_id' => 'nullable|numeric',
+                'number_children' => 'nullable|numeric',
+                'date_birth' => 'nullable|date',
+                'age' => 'nullable|numeric',
+                'education_degree_id' => 'nullable|numeric',
+                'profession_id' => 'nullable|numeric',
+                'ocupacion_actual_id' => 'nullable|numeric',
+                'email' => 'nullable|email|max:100',
+                'sex' => 'nullable|string|max:10',
+                'estado_actual_id' => 'nullable|numeric',
+                'domain_id' => 'required|numeric|exists:domains,id',
+                'color_id' => 'nullable|numeric',
+                'link_facebook' => 'nullable|string|max:255',
+                'link_instagram' => 'nullable|string|max:255',
+                'link_tik_tok' => 'nullable|string|max:255',
+                'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
+                'nombre_imagen' => 'nullable|string|max:255',
+                'cv' => 'nullable|file|mimes:pdf|max:5120',
+                'nombre_cv' => 'nullable|string|max:255',
+                'password' => 'nullable|string|min:6',
+                'urls' => 'nullable|json',
+            ]);
 
-        $cvBank = CvBank::findOrFail($id);
-        // Excluir 'image' y 'password' desde el inicio
-        $data = $request->except(['image', 'password']);
-        Log::info('Datos recibidos en update (sin image ni password):', $data);
+            if ($validator->fails()) {
+                Log::error('Validation errors:', $validator->errors()->toArray());
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
 
-        // Validar unicidad de email (omitir si es null)
-        if ($request->filled('email')) {
-            $userExist = \App\Models\User::where('email', $request->input('email'))
+            $cvBank = CvBank::findOrFail($id);
+            $data = $request->except(['image', 'cv', 'password']);
+            Log::info('Validated data for update:', $data);
+
+            if ($request->filled('email')) {
+                $userExist = User::where('email', $request->input('email'))
+                    ->where('postulante_id', '!=', $cvBank->id)
+                    ->first();
+                if ($userExist) {
+                    return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+                }
+            }
+
+            $userExist = User::where('dni', $request->input('identification_number'))
                 ->where('postulante_id', '!=', $cvBank->id)
                 ->first();
             if ($userExist) {
-                return response()->json(['message' => 'El correo electrónico ya está en uso'], 400);
+                return response()->json(['message' => 'El DNI ya está en uso'], 400);
             }
-        }
 
-        // Validar unicidad de DNI
-        $userExist = \App\Models\User::where('dni', $request->input('identification_number'))
-            ->where('postulante_id', '!=', $cvBank->id)
-            ->first();
-        if ($userExist) {
-            return response()->json(['message' => 'El DNI ya está en uso'], 400);
-        }
-
-        // Validar la cadena base64 si existe y no es vacía
-        if ($request->has('image') && $request->input('image') !== '') {
-            $base64Image = $request->input('image');
-            Log::info('Procesando imagen base64 en update:', ['image_length' => strlen($base64Image)]);
-
-            // Verificar si la cadena base64 es válida
-            if (base64_decode($base64Image, true) === false) {
-                Log::error('Cadena base64 inválida en update');
-                return response()->json(['message' => 'La cadena base64 de la imagen no es válida'], 400);
+            if ($request->hasFile('image')) {
+                if ($cvBank->image) {
+                    Storage::disk('public')->delete($cvBank->image);
+                }
+                $data['image'] = $request->file('image')->store('uploads', 'public');
+                $data['nombre_imagen'] = $request->file('image')->getClientOriginalName();
+                Log::info('New image uploaded:', ['path' => $data['image'], 'name' => $data['nombre_imagen']]);
             }
-            $data['image'] = $base64Image; // Asignar la nueva cadena base64
-            Log::info('Cadena base64 asignada a cvBankData en update:', ['image_length' => strlen($base64Image)]);
-        } else {
-            // Conservar la imagen existente si no se envía una nueva o es vacía
-            Log::info('No se recibió nueva imagen válida, conservando la existente', ['image_value' => $request->input('image')]);
+
+            if ($request->hasFile('cv')) {
+                if ($cvBank->cv_path) {
+                    Storage::disk('public')->delete($cvBank->cv_path);
+                }
+                $data['cv_path'] = $request->file('cv')->store('uploads', 'public');
+                $data['nombre_cv'] = $request->file('cv')->getClientOriginalName();
+                Log::info('New CV uploaded:', ['path' => $data['cv_path'], 'name' => $data['nombre_cv']]);
+            }
+
+            $cvBank->update($data);
+            Log::info('Updated CvBank record:', $cvBank->toArray());
+
+            $userData = [
+                'name' => $request->input('names'),
+                'email' => $request->input('email'),
+                'dni' => $request->input('identification_number'),
+                'domain_id' => $request->input('domain_id'),
+                'rol_id' => 21,
+                'type' => 'user',
+                'status' => 'active',
+                'postulante_id' => $cvBank->id,
+            ];
+
+            if ($request->filled('password') && $request->input('password') !== '********') {
+                $userData['password'] = Hash::make($request->input('password'));
+            }
+
+            $user = User::find($cvBank->user_id);
+            if ($user) {
+                $user->update($userData);
+            } else {
+                $user = new User($userData);
+                $user->save();
+                $cvBank->update(['user_id' => $user->id]);
+            }
+
+            $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
+            $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
+
+            return response()->json([
+                'message' => 'Banco de CV actualizado correctamente',
+                'data' => $cvBank
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            Log::error('CvBank not found: ' . $e->getMessage());
+            return response()->json(['message' => 'Banco de CV no encontrado'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error updating CvBank: ' . $e->getMessage());
+            return response()->json(['message' => 'Error updating CvBank: ' . $e->getMessage()], 500);
         }
-
-        // Actualizar CvBank
-        $cvBank->update($data);
-        Log::info('Registro actualizado en cv_banks:', $cvBank->toArray());
-
-        // Actualizar o crear usuario asociado
-        $userData = [
-            'name' => $request->input('names'),
-            'email' => $request->input('email'),
-            'dni' => $request->input('identification_number'),
-            'domain_id' => $request->input('domain_id'),
-            'rol_id' => 21,
-            'type' => 'user',
-            'status' => 'active',
-            'postulante_id' => $cvBank->id
-        ];
-
-        // Actualizar la contraseña solo si se proporciona y no es el placeholder
-        if ($request->filled('password') && $request->input('password') !== '********') {
-            $userData['password'] = \Illuminate\Support\Facades\Hash::make($request->input('password'));
-        }
-
-        $user = \App\Models\User::find($cvBank->user_id);
-        if ($user) {
-            $user->update($userData);
-        } else {
-            $user = new \App\Models\User($userData);
-            $user->save();
-        }
-
-        return response()->json([
-            'message' => 'Banco de CV actualizado correctamente',
-            'data' => $cvBank
-        ], 200);
-    } catch (ModelNotFoundException $e) {
-        Log::error('Banco de CV no encontrado: ' . $e->getMessage());
-        return response()->json(['message' => 'Banco de CV no encontrado'], 404);
-    } catch (\Exception $e) {
-        Log::error('Error al actualizar el banco de CV: ' . $e->getMessage());
-        return response()->json(['message' => 'Error al actualizar el banco de CV: ' . $e->getMessage()], 500);
     }
-}
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
-        $cvBank = CvBank::find($id);
+        try {
+            $cvBank = CvBank::findOrFail($id);
 
-        if (!$cvBank) {
+            if ($cvBank->image) {
+                Storage::disk('public')->delete($cvBank->image);
+            }
+            if ($cvBank->cv_path) {
+                Storage::disk('public')->delete($cvBank->cv_path);
+            }
+
+            $cvBank->delete();
+
+            return response()->json(['message' => 'Banco de CV eliminado correctamente'], 204);
+        } catch (ModelNotFoundException $e) {
+            Log::error('CvBank not found: ' . $e->getMessage());
             return response()->json(['message' => 'Banco de CV no encontrado'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error deleting CvBank: ' . $e->getMessage());
+            return response()->json(['message' => 'Error deleting CvBank: ' . $e->getMessage()], 500);
         }
-
-        $cvBank->delete();
-
-        return response()->json(['message' => 'Banco de CV eliminado correctamente'], 204);
     }
 }
