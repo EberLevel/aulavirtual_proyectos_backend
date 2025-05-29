@@ -48,15 +48,16 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('informacion-academica/data-create/{domain_id}', 'InformacionAcademicaController@getDataCreate');
     $router->get('informacion-academica/{id}', 'InformacionAcademicaController@show');
     $router->get('informacion-academica/domain/{domain_id}', 'InformacionAcademicaController@getByDomainId');
-
     $router->get('informacion-academica', 'InformacionAcademicaController@index');
-    $router->post('informacion-academica', 'InformacionAcademicaController@store');
-    $router->put('informacion-academica/{id}', 'InformacionAcademicaController@update');
+    $router->post('informacion-academica', 'InformacionAcademicaController@store'); 
+    $router->post('informacion-academica/{id}', 'InformacionAcademicaController@update');
     $router->delete('informacion-academica/{id}', 'InformacionAcademicaController@destroy');
+    $router->post('informacion-academica/{id}/validado', 'InformacionAcademicaController@updateValidado'); 
 
     // Capacitaciones Postulante
     $router->get('capacitaciones-postulante/data-create/{domain_id}', 'CapacitacionesPostulanteController@getDataCreate');
     $router->post('capacitaciones-postulante', 'CapacitacionesPostulanteController@store');
+    $router->post('capacitaciones-postulante/{id}/validado', 'CapacitacionesPostulanteController@updateValidado');
     $router->put('capacitaciones-postulante/{id}', 'CapacitacionesPostulanteController@update');
     $router->get('capacitaciones-postulante/{id_postulante}', 'CapacitacionesPostulanteController@index');
     $router->delete('capacitaciones-postulante/{id}', 'CapacitacionesPostulanteController@destroy');
@@ -64,16 +65,18 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     // Experiencia Laboral
     $router->get('experiencia-laboral/data-create/{domain_id}', 'ExperienciaLaboralController@getDataCreate');
     $router->post('experiencia-laboral', 'ExperienciaLaboralController@store');
+    $router->post('experiencia-laboral/{id}/validado', 'ExperienciaLaboralController@updateValidado');
     $router->put('experiencia-laboral/{id}', 'ExperienciaLaboralController@update');
     $router->get('experiencia-laboral/{id_postulante}', 'ExperienciaLaboralController@index');
     $router->delete('experiencia-laboral/{id}', 'ExperienciaLaboralController@destroy');
 
     // Experiencia Especifica
-    $router->get('experiencia-especifica/data-create/{domain_id}', 'ExperienciaLaboralController@getDataCreate');
-    $router->post('experiencia-especifica', 'ExperienciaLaboralController@store');
-    $router->put('experiencia-especifica/{id}', 'ExperienciaLaboralController@update');
-    $router->get('experiencia-especifica/{id_postulante}', 'ExperienciaLaboralController@index');
-    $router->delete('experiencia-especifica/{id}', 'ExperienciaLaboralController@destroy');
+    $router->get('experiencia-especifica/data-create/{domain_id}', 'ExperienciaEspecificaController@getDataCreate');
+    $router->post('experiencia-especifica', 'ExperienciaEspecificaController@store');
+    $router->post('experiencia-especifica/{id}/validado', 'ExperienciaEspecificaController@updateValidado');
+    $router->put('experiencia-especifica/{id}', 'ExperienciaEspecificaController@update');
+    $router->get('experiencia-especifica/{id_postulante}', 'ExperienciaEspecificaController@index');
+    $router->delete('experiencia-especifica/{id}', 'ExperienciaEspecificaController@destroy');
 
     // Referencias Laborales
     $router->get('referencias-laborales/{id_postulante}', 'ReferenciasLaboralesController@index');
@@ -164,7 +167,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('cvbanks', 'CvBankController@store');
     $router->get('cvbanks/{id}', 'CvBankController@show');
     $router->get('cvbanks/user/{id}', 'CvBankController@showByUser');
-    $router->put('cvbanks/{id}', 'CvBankController@update');
+    $router->post('cvbanks/{id}', 'CvBankController@update');
     $router->delete('cvbanks/{id}', 'CvBankController@destroy');
     
 

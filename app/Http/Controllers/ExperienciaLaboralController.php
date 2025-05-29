@@ -46,10 +46,13 @@ class ExperienciaLaboralController extends Controller
             'modalidad_puesto_id' => 'required|integer|exists:modalidad_puesto,id',
             'domain_id' => 'required|integer|exists:domains,id',
             'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer', // Add validation for nro_pagina_cv
+            'validado' => 'nullable|boolean', // Add validation for validado
         ]);
 
         try {
             $experiencia = new ExperienciaLaboral($request->all());
+            $experiencia->validado = $request->input('validado', 0); // Default to 0 if not provided
             $experiencia->save();
 
             return response()->json(['message' => 'Experiencia laboral creada correctamente', 'data' => $experiencia], 201);
@@ -79,6 +82,8 @@ class ExperienciaLaboralController extends Controller
             'modalidad_puesto_id' => 'required|integer|exists:modalidad_puesto,id',
             'domain_id' => 'required|integer|exists:domains,id',
             'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer', // Add validation for nro_pagina_cv
+            'validado' => 'nullable|boolean', // Add validation for validado
         ]);
 
         try {
@@ -111,6 +116,23 @@ class ExperienciaLaboralController extends Controller
             return response()->json(['message' => 'Experiencia laboral eliminada correctamente'], 200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error al eliminar la experiencia laboral: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateValidado(Request $request, $id)
+    {
+        $this->validate($request, [
+            'validado' => 'required|boolean',
+        ]);
+
+        try {
+            $experiencia = ExperienciaLaboral::findOrFail($id);
+            $experiencia->validado = $request->validado;
+            $experiencia->save();
+
+            return response()->json(['message' => 'Estado de validación actualizado correctamente'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Error al actualizar el estado de validación: ' . $e->getMessage()], 500);
         }
     }
 }

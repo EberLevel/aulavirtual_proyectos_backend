@@ -15,10 +15,15 @@ class InformacionAcademica extends Model
         'grado_instruccion_id',
         'profesion_id',
         'estado_avance_id',
+        'domain_id',
+        'id_postulante',
         'institucion',
         'fecha_inicio',
         'fecha_termino',
-        'observaciones'
+        'observaciones',
+        'imagen_certificado',
+        'nro_pagina_cv',
+        'validado'
     ];
 
     /**

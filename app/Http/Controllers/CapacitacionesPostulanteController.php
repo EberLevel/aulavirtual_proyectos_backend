@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Ano;
 use Exception;
 use App\Models\Capacitacion;
+use Illuminate\Support\Facades\Validator;
+
 class CapacitacionesPostulanteController extends Controller
 {
     // Crear una nueva capacitación
@@ -21,6 +23,8 @@ class CapacitacionesPostulanteController extends Controller
             'imagen_certificado' => 'nullable|string',
             'domain_id' => 'required|integer|exists:domains,id',
             'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer',
+            'validado' => 'nullable|in:0,1',
         ]);
 
         try {
@@ -40,6 +44,7 @@ class CapacitacionesPostulanteController extends Controller
 
             $capacitacion = new CapacitacionPostulante($request->all());
             $capacitacion->tiempo = $tiempo; // Asignar el tiempo calculado
+            $capacitacion->validado = $request->has('validado') ? (bool) $request->validado : false; // Default to false if not provided
             $capacitacion->save();
 
             return response()->json(['message' => 'Capacitación creada correctamente', 'data' => $capacitacion], 201);
@@ -59,7 +64,9 @@ class CapacitacionesPostulanteController extends Controller
             'observaciones' => 'nullable|string',
             'imagen_certificado' => 'nullable|string',
             'domain_id' => 'required|integer|exists:domains,id',
-            'id_postulante' => 'required|integer|exists:cv_banks,id'
+            'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer', // Add validation for nro_pagina_cv
+            'validado' => 'nullable|in:0,1', // Add validation for validado
         ]);
 
         try {
@@ -81,6 +88,7 @@ class CapacitacionesPostulanteController extends Controller
 
             $capacitacion->update($request->all());
             $capacitacion->tiempo = $tiempo; // Asignar el tiempo calculado
+            $capacitacion->validado = $request->has('validado') ? (bool) $request->validado : $capacitacion->validado; // Keep existing value if not provided
             $capacitacion->save();
 
             return response()->json(['message' => 'Capacitación actualizada correctamente', 'data' => $capacitacion], 200);
@@ -111,6 +119,7 @@ class CapacitacionesPostulanteController extends Controller
             return response()->json(['error' => 'Error al eliminar la capacitación: ' . $e->getMessage()], 500);
         }
     }
+
     public function getDataCreate($domain_id)
     {
         try {
@@ -118,6 +127,38 @@ class CapacitacionesPostulanteController extends Controller
             return response()->json(['estados' => $capacitaciones], 200);
         } catch (Exception $e) {
             return response()->json(['error' => 'Error al obtener datos: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Método para actualizar el campo validado
+    public function updateValidado(Request $request, $id)
+    {
+        try {
+            // Validar el campo validado
+            $validator = Validator::make($request->all(), [
+                'validado' => 'required|in:0,1',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Los datos proporcionados no son válidos.',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $capacitacion = CapacitacionPostulante::findOrFail($id);
+            $capacitacion->validado = (bool) $request->validado;
+            $capacitacion->save();
+
+            return response()->json([
+                'message' => 'Estado de validación actualizado correctamente',
+                'data' => $capacitacion,
+            ], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Capacitación no encontrada'], 404);
+        } catch (Exception $e) {
+            \Log::error('Error al actualizar validado: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al actualizar el estado de validación: ' . $e->getMessage()], 500);
         }
     }
 }

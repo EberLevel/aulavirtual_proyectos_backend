@@ -30,7 +30,9 @@ class ExperienciaLaboral extends Model
         'vinculo_laboral_id',
         'modalidad_puesto_id',
         'domain_id',
-        'id_postulante'
+        'id_postulante',
+        'nro_pagina_cv', 
+        'validado',
     ];
 
     // Relación con la tabla 'vinculo_laboral'

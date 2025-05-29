@@ -35,26 +35,29 @@ class ExperienciaEspecificaController extends Controller
             'remuneracion_mensual' => 'required|numeric',
             'fecha_ingreso' => 'required|date',
             'fecha_termino' => 'required|date',
-            'tiempo_experiencia_especifica' => 'required|string|max:255',
+            'tiempo_experiencia_especifica' => 'nullable|string|max:255',
             'tiempo_experiencia_general' => 'required|string|max:255',
             'dias_cuenta_regresiva' => 'required|integer',
             'funciones' => 'required|string',
             'motivo_termino' => 'nullable|string',
             'observaciones' => 'nullable|string',
             'imagen' => 'nullable|string',
-            'vinculo_laboral_id' => 'required|integer|exists:vinculo_laboral,id',
+            'vinculo_laboral_id' => 'nullable|integer|exists:vinculo_laboral,id',
             'modalidad_puesto_id' => 'required|integer|exists:modalidad_puesto,id',
             'domain_id' => 'required|integer|exists:domains,id',
             'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer',
+            'validado' => 'nullable|boolean',
         ]);
 
         try {
             $experiencia = new ExperienciaEspecifica($request->all());
+            $experiencia->validado = $request->input('validado', 0); // Default to 0
             $experiencia->save();
 
-            return response()->json(['message' => 'Experiencia laboral creada correctamente', 'data' => $experiencia], 201);
+            return response()->json(['message' => 'Experiencia específica creada correctamente', 'data' => $experiencia], 201);
         } catch (Exception $e) {
-            return response()->json(['error' => 'Error al crear la experiencia laboral: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error al crear la experiencia específica: ' . $e->getMessage()], 500);
         }
     }
 
@@ -68,26 +71,28 @@ class ExperienciaEspecificaController extends Controller
             'remuneracion_mensual' => 'required|numeric',
             'fecha_ingreso' => 'required|date',
             'fecha_termino' => 'required|date',
-            'tiempo_experiencia_especifica' => 'required|string|max:255',
+            'tiempo_experiencia_especifica' => 'nullable|string|max:255',
             'tiempo_experiencia_general' => 'required|string|max:255',
             'dias_cuenta_regresiva' => 'required|integer',
             'funciones' => 'required|string',
             'motivo_termino' => 'nullable|string',
             'observaciones' => 'nullable|string',
             'imagen' => 'nullable|string',
-            'vinculo_laboral_id' => 'required|integer|exists:vinculo_laboral,id',
+            'vinculo_laboral_id' => 'nullable|integer|exists:vinculo_laboral,id',
             'modalidad_puesto_id' => 'required|integer|exists:modalidad_puesto,id',
             'domain_id' => 'required|integer|exists:domains,id',
             'id_postulante' => 'required|integer|exists:cv_banks,id',
+            'nro_pagina_cv' => 'nullable|integer',
+            'validado' => 'nullable|boolean',
         ]);
 
         try {
             $experiencia = ExperienciaEspecifica::findOrFail($id);
             $experiencia->update($request->all());
 
-            return response()->json(['message' => 'Experiencia laboral actualizada correctamente', 'data' => $experiencia], 200);
+            return response()->json(['message' => 'Experiencia específica actualizada correctamente', 'data' => $experiencia], 200);
         } catch (Exception $e) {
-            return response()->json(['error' => 'Error al actualizar la experiencia laboral: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error al actualizar la experiencia específica: ' . $e->getMessage()], 500);
         }
     }
 
@@ -99,7 +104,7 @@ class ExperienciaEspecificaController extends Controller
                 ->get();
             return response()->json(['data' => $experiencias], 200);
         } catch (Exception $e) {
-            return response()->json(['error' => 'Error al obtener las experiencias laborales: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error al obtener las experiencias específicas: ' . $e->getMessage()], 500);
         }
     }
 
@@ -108,9 +113,26 @@ class ExperienciaEspecificaController extends Controller
         try {
             $experiencia = ExperienciaEspecifica::findOrFail($id);
             $experiencia->delete();
-            return response()->json(['message' => 'Experiencia laboral eliminada correctamente'], 200);
+            return response()->json(['message' => 'Experiencia específica eliminada correctamente'], 200);
         } catch (Exception $e) {
-            return response()->json(['error' => 'Error al eliminar la experiencia laboral: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error al eliminar la experiencia específica: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateValidado(Request $request, $id)
+    {
+        $this->validate($request, [
+            'validado' => 'required|boolean',
+        ]);
+
+        try {
+            $experiencia = ExperienciaEspecifica::findOrFail($id);
+            $experiencia->validado = $request->validado;
+            $experiencia->save();
+
+            return response()->json(['message' => 'Estado de validación actualizado correctamente'], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Error al actualizar el estado de validación: ' . $e->getMessage()], 500);
         }
     }
 }
