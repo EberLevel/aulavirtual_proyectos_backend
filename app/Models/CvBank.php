@@ -51,6 +51,7 @@ class CvBank extends Model
         'link_facebook',
         'link_instagram',
         'link_tik_tok',
+        'nivel_estudios_id'
     ];
 
     // Relationships
