@@ -102,16 +102,22 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('instituciones', 'InstitucionesController@index');
     $router->get('instituciones/{id:[0-9]+}', 'InstitucionesController@show');
 
-    $router->get('instituciones/reporte-puestos', 'InstitucionesPuestoController@getPuestosByDomain');
     $router->get('instituciones/getAreas', 'InstitucionAreaController@index');
 
     $router->get('instituciones/areas/{id}', 'InstitucionAreaController@getByAreaId');
     $router->post('instituciones/areas', 'InstitucionAreaController@store');
     $router->delete('instituciones/areas/{id}', 'InstitucionAreaController@destroy');
+
+    $router->get('instituciones/reporte-puestos', 'InstitucionesPuestoController@getPuestosByDomain');
     $router->get('instituciones/puestos', 'InstitucionesPuestoController@index');
     $router->post('instituciones/puestos', 'InstitucionesPuestoController@store');
     $router->get('instituciones/puestos/get-last-id', 'InstitucionesPuestoController@getLastId');
+    $router->post('control-puestos', 'InstitucionesPuestoController@storeControlPuestos');
+    $router->get('control-puestos/{postulante_id}', 'InstitucionesPuestoController@getControlPuestos');
     $router->delete('instituciones/puestos/{id}', 'InstitucionesPuestoController@destroy');
+    $router->post('instituciones/puestos/massiveUpload', 'InstitucionesPuestoController@massiveUpload');
+
+
     $router->get('instituciones/puestos/perfiles', 'InstitucionesPerfilController@index');
     $router->post('instituciones/puestos/perfiles', 'InstitucionesPerfilController@store');
     $router->delete('instituciones/puestos/perfiles/{id}', 'InstitucionesPerfilController@destroy');
@@ -125,9 +131,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('subinstitutions-dropdown', 'InstitucionesController@getInstitucionesByDomain');
     $router->get('permanencia-dropdown', 'InstitucionesController@getPermanenciaDropdown');
     $router->get('continuidad-dropdown', 'InstitucionesController@getContinuidadDropdown');
-    $router->get('control-puestos/{postulante_id}', 'InstitucionesPuestoController@getControlPuestos');
     //post control-puestos
-    $router->post('control-puestos', 'InstitucionesPuestoController@storeControlPuestos');
     $router->get('carreras/{id}', 'CarreraController@show');
     $router->get('carreras-dropdown', 'CarreraController@dropdown');
     $router->get('carreras-dropdown/{plan_de_estudios_id}', 'CarreraController@dropDown');

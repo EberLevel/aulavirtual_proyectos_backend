@@ -113,6 +113,7 @@ class InstitucionesController extends Controller
             return $query->where('domain_id', $domain_id);
         })->get();
     }
+    
     public function dropdown(){
         $domain_id = request()->query('domain_id')??null;
         $instituciones = DB::table('companies')->when($domain_id, function ($query, $domain_id) {
