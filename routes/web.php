@@ -117,6 +117,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('instituciones/puestos/perfiles/{id}', 'InstitucionesPerfilController@destroy');
     $router->post('instituciones/get-institucion', 'InstitucionesController@getInstitucion');
     $router->post('instituciones', 'InstitucionesController@store');
+    $router->post('instituciones/massiveUpload', 'InstitucionesController@massiveUpload');
     $router->put('instituciones/{id}', 'InstitucionesController@update');
     $router->delete('instituciones/{id}', 'InstitucionesController@destroy');
     $router->get('cv', 'InstitucionesController@getCv');
