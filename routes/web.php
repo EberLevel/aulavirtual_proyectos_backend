@@ -165,6 +165,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cvbanks/filters-data', 'CvBankController@filtersData');
     $router->get('cvbanks/create-data/{domain_id}', 'CvBankController@dataCreate');
     $router->post('cvbanks', 'CvBankController@store');
+    $router->post('cv-banks/massiveUpload', 'CvBankController@massiveUpload');
     $router->get('cvbanks/{id}', 'CvBankController@show');
     $router->get('cvbanks/user/{id}', 'CvBankController@showByUser');
     $router->post('cvbanks/{id}', 'CvBankController@update');

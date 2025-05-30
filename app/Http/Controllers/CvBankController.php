@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class CvBankController extends Controller
 {
@@ -418,8 +419,6 @@ class CvBankController extends Controller
         }
     }
 
-
-
     public function destroy($id)
     {
         try {
@@ -442,5 +441,149 @@ class CvBankController extends Controller
             Log::error('Error deleting CvBank: ' . $e->getMessage());
             return response()->json(['message' => 'Error deleting CvBank: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function massiveUpload(Request $request)
+    {
+        try {
+            // Validar que se envíe un array de datos
+            $data = $request->input('postulantes', []);
+            if (!is_array($data) || empty($data)) {
+                return response()->json(['message' => 'No se proporcionaron datos para la subida masiva'], 400);
+            }
+
+            $domainId = $request->input('domain_id');
+            if (!$domainId || !is_numeric($domainId)) {
+                return response()->json(['message' => 'El domain_id es requerido y debe ser un número'], 400);
+            }
+
+            $successCount = 0;
+            $errorDetails = [];
+            $batchSize = 100;
+
+            for ($i = 0; $i < count($data); $i += $batchSize) {
+                $batch = array_slice($data, $i, $batchSize);
+
+                DB::beginTransaction();
+
+                foreach ($batch as $index => $postulante) {
+                    $offset = $i + $index + 1;
+
+                    $validator = Validator::make($postulante, [
+                        'code' => 'required|string|max:100',
+                        'names' => 'required|string|max:100',
+                        'identification_number' => 'required|string|max:100',
+                        'password' => 'required|string|min:6',
+                        'phone' => 'required|string|max:20',
+                        'profession_id' => [
+                            'required',
+                            'numeric',
+                            Rule::exists('profesion', 'id')->where(function ($query) use ($domainId) {
+                                $query->where('domain_id', $domainId);
+                            }),
+                        ],
+                    ]);
+
+                    if ($validator->fails()) {
+                        Log::info('Validación fallida para row ' . $offset, [
+                            'postulante' => $postulante,
+                            'errors' => $validator->errors()->all(),
+                            'professions_check' => \App\Models\Profesion::where('id', $postulante['profession_id'])
+                                ->where('domain_id', $domainId)->first()
+                        ]);
+                        $errorDetails[] = [
+                            'row' => $offset,
+                            'errors' => $validator->errors()->all()
+                        ];
+                        continue;
+                    }
+
+                    // Verificar duplicados de DNI
+                    $existingDni = User::where('dni', $postulante['identification_number'])->first();
+                    if ($existingDni) {
+                        $errorDetails[] = [
+                            'row' => $offset,
+                            'errors' => ['El DNI ya está en uso']
+                        ];
+                        continue;
+                    }
+
+                    // Verificar duplicados de email (si está presente)
+                    if (isset($postulante['email']) && !empty($postulante['email'])) {
+                        $existingEmail = User::where('email', $postulante['email'])->first();
+                        if ($existingEmail) {
+                            $errorDetails[] = [
+                                'row' => $offset,
+                                'errors' => ['El correo electrónico ya está en uso']
+                            ];
+                            continue;
+                        }
+                    }
+
+                    // Usar directamente profession_id del payload
+                    $professionId = $postulante['profession_id'];
+
+                    // Crear usuario
+                    $user = new User([
+                        'name' => $postulante['names'],
+                        'dni' => $postulante['identification_number'],
+                        'password' => Hash::make($postulante['password']),
+                        'domain_id' => $domainId,
+                        'rol_id' => 21,
+                        'type' => 'user',
+                        'status' => 'active',
+                        'email' => $postulante['email'] ?? null,
+                    ]);
+                    $user->save();
+
+                    // Crear CvBank
+                    $cvBankData = [
+                        'position_code' => null,
+                        'code' => $postulante['code'] ?: $this->generateCodigoConcursante($domainId),
+                        'identification_document_id' => 1,
+                        'identification_number' => $postulante['identification_number'],
+                        'names' => $postulante['names'],
+                        'phone' => $postulante['phone'],
+                        'profession_id' => $professionId,
+                        'domain_id' => $domainId,
+                        'user_id' => $user->id,
+                        'estado_actual_id' => 1,
+                    ];
+
+                    $cvBank = CvBank::create($cvBankData);
+                    $user->update(['postulante_id' => $cvBank->id]);
+
+                    $successCount++;
+                }
+
+                DB::commit();
+            }
+
+            $response = [
+                'message' => 'Subida masiva procesada',
+                'success_count' => $successCount,
+                'total_rows' => count($data),
+            ];
+
+            if (!empty($errorDetails)) {
+                $response['errors'] = $errorDetails;
+            }
+
+            return response()->json($response, 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en la subida masiva: ' . $e->getMessage());
+            return response()->json(['message' => 'Error en la subida masiva: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    private function getProfessionId($professionName, $domainId)
+    {
+        $profession = \App\Models\Profesion::where('nombre', $professionName)
+            ->where('domain_id', $domainId)
+            ->first();
+
+        return $profession ? $profession->id : null;
     }
 }
