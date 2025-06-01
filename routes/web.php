@@ -311,6 +311,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     //Profesiones
     $router->get('profesiones/{domain_id}', 'ProfesionController@index');
     $router->post('profesion', 'ProfesionController@store');
+    $router->post('profesiones/massive', 'ProfesionController@massiveStore');
     $router->get('profesion/{id}', 'ProfesionController@show');
     $router->put('profesion/{id}', 'ProfesionController@update');
     $router->delete('profesion/{id}', 'ProfesionController@destroy');

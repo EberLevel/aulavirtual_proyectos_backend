@@ -31,8 +31,9 @@ class EstadoController extends Controller
         return response()->json($areas);
     }
 
-    public function store(Request $request,$domain_id)
+    public function store(Request $request, $domain_id)
     {
+        \Log::info('Datos de la solicitud:', $request->all()); // Depura la solicitud entrante
         $this->validate($request, [
             'nombre' => 'required|string|max:255',
             'color' => 'string|max:255',
@@ -47,6 +48,23 @@ class EstadoController extends Controller
         return response()->json($area, 201);
     }
 
+    public function update(Request $request, $domain_id, $id)
+    {
+        \Log::info('Datos de la solicitud:', $request->all()); // Depura la solicitud entrante
+        $this->validate($request, [
+            'nombre' => 'string|max:255',
+            'color' => 'string|max:255',
+        ]);
+
+        $area = Estado::find($id);
+        if (!$area) {
+            return response()->json(['mensaje' => 'Área no encontrada', 'status' => 404], 404);
+        }
+
+        $area->update($request->all());
+        return response()->json($area);
+    }
+
     public function show($id)
     {
         $area = Estado::find($id);
@@ -56,25 +74,7 @@ class EstadoController extends Controller
         return response()->json($area);
     }
 
-    public function update(Request $request, $domain_id, $id)
-    {
 
-        $this->validate($request, [
-            'nombre' => 'string|max:255',
-            'color' => 'string|max:255',
-        ]);
-
-
-        $area = Estado::find($id);
-
-
-        if (!$area) {
-            return response()->json(['mensaje' => 'Área no encontrada', 'status' => 404], 404);
-        }
-
-        $area->update($request->all());
-        return response()->json($area);
-    }
 
     public function destroy($domain_id, $id)
     {

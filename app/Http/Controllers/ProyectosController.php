@@ -34,22 +34,41 @@ class ProyectosController extends Controller
         ], 200);
     }
 
-    // Crear un nuevo proyecto
     public function store(Request $request)
     {
-        // Validar los datos de entrada
+        \Log::info('Request data:', $request->all());
         $this->validate($request, [
             'estado' => 'required|string|max:20',
             'nombre' => 'required|string|max:191',
+            'domain_id' => 'required|integer|exists:domains,id', // Validate domain_id
         ]);
 
-        // Crear un nuevo proyecto con los datos proporcionados y el domain_id
-        $proyecto = Proyecto::create(array_merge($request->all(), ['domain_id' => $this->domain_id]));
-
+        $proyecto = Proyecto::create($request->all());
         return response()->json([
             'message' => 'Proyecto creado correctamente',
             'data' => $proyecto,
         ], 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        \Log::info('Request data:', $request->all());
+        $this->validate($request, [
+            'estado' => 'required|string|max:20',
+            'nombre' => 'required|string|max:191',
+            'domain_id' => 'required|integer|exists:domains,id', // Validate domain_id
+        ]);
+
+        $proyecto = Proyecto::find($id);
+        if (!$proyecto) {
+            return response()->json(['message' => 'Proyecto no encontrado'], 404);
+        }
+
+        $proyecto->update($request->all());
+        return response()->json([
+            'message' => 'Proyecto actualizado correctamente',
+            'data' => $proyecto,
+        ], 200);
     }
 
     // Mostrar un proyecto específico por ID
@@ -62,30 +81,6 @@ class ProyectosController extends Controller
         }
 
         return response()->json(['data' => $proyecto], 200);
-    }
-
-    // Actualizar un proyecto existente
-    public function update(Request $request, $id)
-    {
-        // Validar los datos de entrada
-        $this->validate($request, [
-            'estado' => 'required|string|max:20',
-            'nombre' => 'required|string|max:191',
-        ]);
-
-        $proyecto = Proyecto::find($id);
-
-        if (!$proyecto) {
-            return response()->json(['message' => 'Proyecto no encontrado'], 404);
-        }
-
-        // Actualizar el proyecto con los nuevos datos
-        $proyecto->update($request->all());
-
-        return response()->json([
-            'message' => 'Proyecto actualizado correctamente',
-            'data' => $proyecto,
-        ], 200);
     }
 
     // Eliminar un proyecto

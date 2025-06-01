@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Profesion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class ProfesionController extends Controller
 {
@@ -108,5 +109,78 @@ class ProfesionController extends Controller
         $profesion->delete();
 
         return response()->json(['message' => 'Profesión eliminada correctamente'], 204);
+    }
+
+    public function massiveStore(Request $request)
+    {
+        // Validar el payload principal
+        $validator = Validator::make($request->all(), [
+            'domain_id' => 'required|integer|exists:domains,id',
+            'profesiones' => 'required|array|min:1',
+            'profesiones.*.nombre' => 'required|string|max:191',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Errores de validación',
+                'errors' => $validator->errors(),
+            ], 400);
+        }
+
+        $domain_id = $request->input('domain_id');
+        $profesiones = $request->input('profesiones');
+        $success_count = 0;
+        $errors = [];
+
+        // Iniciar una transacción para garantizar consistencia
+        DB::beginTransaction();
+        try {
+            foreach ($profesiones as $index => $profesionData) {
+                // Validar cada profesión individualmente
+                $validator = Validator::make($profesionData, [
+                    'nombre' => 'required|string|max:191|unique:profesion,nombre,NULL,id,domain_id,' . $domain_id,
+                ]);
+
+                if ($validator->fails()) {
+                    $errors[] = [
+                        'row' => $index + 2, // +2 porque la fila 1 es el encabezado
+                        'errors' => $validator->errors()->all()
+                    ];
+                    continue;
+                }
+
+                // Crear la profesión
+                Profesion::create([
+                    'nombre' => $profesionData['nombre'],
+                    'domain_id' => $domain_id,
+                ]);
+                $success_count++;
+            }
+
+            if (count($errors) > 0) {
+                // Si hay errores, hacer rollback parcial
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Algunas profesiones no se pudieron crear',
+                    'success_count' => $success_count,
+                    'errors' => $errors,
+                ], 207); // 207 Multi-Status para indicar éxito parcial
+            }
+
+            // Confirmar la transacción si todo está bien
+            DB::commit();
+            return response()->json([
+                'message' => 'Profesiones creadas correctamente',
+                'success_count' => $success_count,
+                'errors' => [],
+            ], 201);
+        } catch (\Exception $e) {
+            // En caso de error inesperado, hacer rollback
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al procesar la carga masiva',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
