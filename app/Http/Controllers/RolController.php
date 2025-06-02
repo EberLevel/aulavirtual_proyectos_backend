@@ -20,27 +20,29 @@ class RolController extends Controller
     {
         Log::info('👉 domain_id: ' . $domain_id);
         Log::info('👉 rol_id: ' . $rol_id);
-    
+
+        // Superadmin (rol_id == 1) ve todos los roles
         if ((int)$rol_id === 1) {
             return response()->json(Rol::all());
         }
-    
-        if (!empty($domain_id)) {
-            $roles = Rol::where('domain_id', $domain_id)
-                        ->where('id', '!=', 1)
-                        ->get();
-    
-            Log::info('🔎 Roles encontrados: ' . $roles->count());
-    
-            return response()->json($roles);
-        }
-    
-        return response()->json([], 200);
-    }
-    
-    
-    
 
+        // Roles del dominio actual + algunos sin dominio (id 12, 17, 21)
+        $roles = Rol::where(function ($query) use ($domain_id) {
+                        $query->where('domain_id', $domain_id)
+                            ->orWhere(function ($q) {
+                                $q->whereNull('domain_id')
+                                    ->whereIn('id', [12, 17, 21]);
+                            });
+                    })
+                    ->whereNotIn('id', [1, 8])
+                    ->get();
+
+        Log::info('🔎 Roles finales (con dominio ' . $domain_id . ' y globales 12,17,21): ' . $roles->count());
+
+        return response()->json($roles);
+    }
+ 
+    
     public function store(Request $request)
     {
         $this->validate($request, [

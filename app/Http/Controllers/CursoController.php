@@ -148,7 +148,7 @@ class CursoController extends Controller
             'tema' => 'required|string',
             'estadoId' => 'required|integer',
             'domain_id' => 'required',
-            'asignacionDocentesId' => 'required',
+            'asignacionDocentesId' => 'nullable',
         ]);
 
         $curso = Curso::create([
@@ -220,7 +220,7 @@ class CursoController extends Controller
             'tema' => 'required|string',
             'estadoId' => 'required|integer',
             'domain_id' => 'required',
-            'asignacionDocentesId' => 'required',
+            'asignacionDocentesId' => 'nullable',
         ]);
 
         $curso = Curso::findOrFail($id);
