@@ -82,7 +82,7 @@ class AlumnoController extends Controller
             // Procesar imágenes en base64 si están presentes
             $fotoPerfil = $request->input('fotoPerfil');
             $fotoCarnet = $request->input('fotoCarnet');
-            
+
             // Crear el alumno
             $alumno = [
                 "codigo" => $request->input('codigo'),
@@ -143,6 +143,236 @@ class AlumnoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function storeMasivos(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            // Validar que se reciba un array de alumnos directamente
+            $this->validate($request, [
+                '*.codigo' => 'required|string|max:255',
+                '*.nombres' => 'required|string|max:255',
+                '*.apellidos' => 'required|string|max:255',
+                '*.cicloId' => 'required|string',
+                '*.carreraId' => 'required|string',
+                '*.promocion_id' => 'required|string',
+                '*.domain_id' => 'required|integer',
+                '*.estadoId' => 'required|string',
+                '*.email' => 'required|email|max:255',
+                '*.contraseña' => 'required|string|min:6'
+            ]);
+
+            // Validar que el request sea un array
+            $alumnosData = $request->all();
+            if (!is_array($alumnosData) || empty($alumnosData)) {
+                return response()->json(['error' => 'Se requiere un array de alumnos'], 400);
+            }
+
+            $alumnosCreados = [];
+            $alumnosActualizados = [];
+
+            // Procesar cada alumno del array
+            foreach ($alumnosData as $index => $alumnoData) {
+
+                // buscar cicloId en la tabla ciclos
+                $ciclo = DB::table('ciclos')->where('nombre', $alumnoData['cicloId'])->where('domain_id', $alumnoData['domain_id'])->first();
+                if (!$ciclo) {
+                    throw new \Exception("Alumno en posición {$index}: Ciclo no encontrado");
+                }
+                $alumnoData['cicloId'] = $ciclo->id;
+
+                // buscar carreraId en la tabla carreras
+                $carrera = DB::table('carreras')->where('nombres', $alumnoData['carreraId'])->where('domain_id', $alumnoData['domain_id'])->first();
+                if (!$carrera) {
+                    throw new \Exception("Alumno en posición {$index}: Carrera no encontrada");
+                }
+                $alumnoData['carreraId'] = $carrera->id;
+
+                // buscar promocion_id en la tabla promociones
+                $promocion = DB::table('promociones')->where('nombre_promocion', $alumnoData['promocion_id'])->where('domain_id', $alumnoData['domain_id'])->first();
+                if (!$promocion) {
+                    throw new \Exception("Alumno en posición {$index}: Promoción no encontrada");
+                }
+                $alumnoData['promocion_id'] = $promocion->id;
+
+                // Validar que el estadoId exista
+                $estado = DB::table('plan_de_estudios')->where('nombre', $alumnoData['estadoId'])->where('domain_id', $alumnoData['domain_id'])->first();
+                if (!$estado) {
+                    throw new \Exception("Alumno en posición {$index}: Estado no encontrado");
+                }
+                $alumnoData['estadoId'] = $estado->id;
+
+                // Verificar si el alumno ya existe por código
+                $alumnoExistente = DB::table('alumnos')
+                    ->where('codigo', $alumnoData['codigo'])
+                    ->where('domain_id', $alumnoData['domain_id'])
+                    ->first();
+
+                // Validación de email según si el alumno existe o no
+                if ($alumnoExistente) {
+                    // CASO: Alumno existe - verificar si hay más de 2 registros con el mismo email
+                    $countEmailExist = DB::table('users')
+                        ->where('email', $alumnoData['email'])
+                        ->count();
+
+                    if ($countEmailExist >= 2) {
+                        throw new \Exception("Alumno en posición {$index}: El email {$alumnoData['email']} ya existe en 2 o más registros");
+                    }
+                } else {
+                    // CASO: Alumno nuevo - verificar que el email no exista en absoluto
+                    $emailExist = DB::table('users')
+                        ->where('email', $alumnoData['email'])
+                        ->first();
+
+                    if ($emailExist) {
+                        throw new \Exception("Alumno en posición {$index}: El email {$alumnoData['email']} ya existe");
+                    }
+                }
+
+                // Procesar imágenes en base64 si están presentes
+                $fotoPerfil = $alumnoData['fotoPerfil'] ?? null;
+                $fotoCarnet = $alumnoData['fotoCarnet'] ?? null;
+
+                $fechaNacimiento = $request->input('fechaNacimiento');
+
+                if ($fechaNacimiento) {
+                    try {
+                        $fechaNacimiento = Carbon::createFromFormat('d/m/Y', $fechaNacimiento)->toDateString();
+                    } catch (\Exception $e) {
+                        $fechaNacimiento = date('Y-m-d');
+                    }
+                } else {
+                    $fechaNacimiento = date('Y-m-d');
+                }
+
+                // Preparar datos del alumno
+                $alumnoDataForDB = [
+                    "codigo" => $alumnoData['codigo'],
+                    "nombres" => $alumnoData['nombres'],
+                    "apellidos" => $alumnoData['apellidos'],
+                    "celular" => $alumnoData['celular'] ?? null,
+                    "email" => $alumnoData['email'],
+                    "carrera_id" => $alumnoData['carreraId'],
+                    "ciclo_id" => $alumnoData['cicloId'],
+                    "dni" => $alumnoData['numeroDocumento'] ?? null,
+                    "fecha_nacimiento" => $fechaNacimiento,
+                    "direccion" => $alumnoData['direccion'] ?? null,
+                    "domain_id" => $alumnoData['domain_id'],
+                    "promocion_id" => $promocion->id,
+                    "estado_id" => $alumnoData['estadoId'],
+                    "foto_perfil" => $fotoPerfil,
+                    "foto_carnet" => $fotoCarnet,
+                    "updated_at" => Carbon::now()
+                ];
+
+                $alumnoId = null;
+                $esActualizacion = false;
+
+                if ($alumnoExistente) {
+                    // ACTUALIZAR alumno existente
+                    DB::table('alumnos')
+                        ->where('id', $alumnoExistente->id)
+                        ->update($alumnoDataForDB);
+
+                    $alumnoId = $alumnoExistente->id;
+                    $esActualizacion = true;
+
+                    // Actualizar también el usuario correspondiente
+                    DB::table('users')
+                        ->where('alumno_id', $alumnoId)
+                        ->update([
+                            'name' => $alumnoData['nombres'],
+                            'lastname' => $alumnoData['apellidos'],
+                            'email' => $alumnoData['email'],
+                            'dni' => $alumnoData['numeroDocumento'] ?? null,
+                            'password' => Hash::make($alumnoData['contraseña']),
+                            'updated_at' => Carbon::now()
+                        ]);
+
+                    // Eliminar cursos existentes para reasignar
+                    DB::table('curso_alumno')
+                        ->where('alumno_id', $alumnoId)
+                        ->where('domain_id', $alumnoData['domain_id'])
+                        ->delete();
+
+                } else {
+                    // CREAR nuevo alumno
+                    $alumnoDataForDB['created_at'] = Carbon::now();
+                    $alumnoId = DB::table('alumnos')->insertGetId($alumnoDataForDB);
+
+                    // Crear el usuario correspondiente
+                    DB::table('users')->insert([
+                        'alumno_id' => $alumnoId,
+                        'name' => $alumnoData['nombres'],
+                        'lastname' => $alumnoData['apellidos'],
+                        'email' => $alumnoData['email'],
+                        'dni' => $alumnoData['numeroDocumento'] ?? null,
+                        'domain_id' => $alumnoData['domain_id'],
+                        'password' => Hash::make($alumnoData['contraseña']),
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
+                        'rol_id' => 12
+                    ]);
+                }
+
+                // Obtener cursos de la carrera seleccionada
+                $cursos = DB::table('cursos')
+                    ->where('carrera_id', $alumnoData['carreraId'])
+                    ->where('estado_id', $alumnoData['estadoId'])
+                    ->get();
+
+                // Insertar los cursos en la tabla `curso_alumno`
+                foreach ($cursos as $curso) {
+                    DB::table('curso_alumno')->insert([
+                        'curso_id' => $curso->id,
+                        'alumno_id' => $alumnoId,
+                        'domain_id' => $alumnoData['domain_id'],
+                        'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now()
+                    ]);
+                }
+
+                // Agregar a la lista correspondiente
+                $alumnoInfo = [
+                    'alumno_id' => $alumnoId,
+                    'email' => $alumnoData['email'],
+                    'nombres' => $alumnoData['nombres'],
+                    'apellidos' => $alumnoData['apellidos']
+                ];
+
+                if ($esActualizacion) {
+                    $alumnosActualizados[] = $alumnoInfo;
+                } else {
+                    $alumnosCreados[] = $alumnoInfo;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'alumnos_creados' => count($alumnosCreados),
+                'alumnos_actualizados' => count($alumnosActualizados),
+                'total_procesados' => count($alumnosData),
+                'alumnos_nuevos' => $alumnosCreados,
+                'alumnos_actualizados' => $alumnosActualizados,
+                'message' => 'Proceso completado: ' . count($alumnosCreados) . ' alumnos creados, ' . count($alumnosActualizados) . ' alumnos actualizados'
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Log del error para debugging
+            \Log::error('Error al crear/actualizar alumnos masivos: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Error al procesar los alumnos: ' . $e->getMessage(),
+                'details' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
         }
     }
 
@@ -231,17 +461,17 @@ class AlumnoController extends Controller
     {
         // Buscar al alumno por ID
         $alumno = Alumno::find($id);
-    
+
         if ($alumno) {
             return response()->json($alumno, 200); // Retorna el alumno si se encuentra
         }
-    
+
         // Respuesta en caso de que no se encuentre el alumno
         return response()->json(['message' => 'Alumno no encontrado'], 404);
     }
-    
-    
-    
+
+
+
 
     // Obtener el alumno logueado
     public function getLoggedAlumno($alumno_id, $dominio)

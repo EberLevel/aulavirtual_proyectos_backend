@@ -49,10 +49,10 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('informacion-academica/{id}', 'InformacionAcademicaController@show');
     $router->get('informacion-academica/domain/{domain_id}', 'InformacionAcademicaController@getByDomainId');
     $router->get('informacion-academica', 'InformacionAcademicaController@index');
-    $router->post('informacion-academica', 'InformacionAcademicaController@store'); 
+    $router->post('informacion-academica', 'InformacionAcademicaController@store');
     $router->post('informacion-academica/{id}', 'InformacionAcademicaController@update');
     $router->delete('informacion-academica/{id}', 'InformacionAcademicaController@destroy');
-    $router->post('informacion-academica/{id}/validado', 'InformacionAcademicaController@updateValidado'); 
+    $router->post('informacion-academica/{id}/validado', 'InformacionAcademicaController@updateValidado');
 
     // Capacitaciones Postulante
     $router->get('capacitaciones-postulante/data-create/{domain_id}', 'CapacitacionesPostulanteController@getDataCreate');
@@ -155,7 +155,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('documento-gestion-codigo', 'DocumentoGestionController@generateCode');
     $router->get('alumnos/{domain_id}/{user_id}/documentos', 'DocumentoGestionController@getAlumnoDocuments');
 
-    //Docente 
+    //Docente
     $router->get('docentes-dropdown/{domain_id}', 'DocenteController@dropdown');
 
     $router->get('docentes/logged/{docente_id}/{dominio}', 'DocenteController@getLoggedDocente');
@@ -163,6 +163,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('docentes/listar/{domain_id}', 'DocenteController@index');
     $router->get('docentes/listar/{domain_id}/{id}', 'DocenteController@show');
     $router->post('docentes/registrar', 'DocenteController@store');
+    $router->post('docentes-masivos', 'DocenteController@storeMasivos');
     $router->put('docentes/actualizar/{id}', 'DocenteController@update');
     $router->delete('docentes/eliminar/{id}', 'DocenteController@destroy');
 
@@ -175,9 +176,10 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cvbanks/user/{id}', 'CvBankController@showByUser');
     $router->post('cvbanks/{id}', 'CvBankController@update');
     $router->delete('cvbanks/{id}', 'CvBankController@destroy');
-    
+
 
     $router->post('cursos', 'CursoController@store');
+    $router->post('cursos-masivos', 'CursoController@storeMasivos');
     $router->put('cursos/{id}', 'CursoController@update');
     $router->delete('cursos/{id}', 'CursoController@destroy');
     $router->get('cursos/{id}/tema', 'CursoController@getTema');
@@ -187,7 +189,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cursos/domain/{domainId}', 'CursoController@getCursosByDomain');
     $router->get('cursos/{id}/syllabus', 'CursoController@getSyllabus');
     $router->get('cursos/carrera/{id}', 'CursoController@index');
-    $router->get('unidades/all', 'CursoController@getAllCursos');
+    $router->get('unidades/all/{domain_id}', 'CursoController@getAllCursos');
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}', 'CursoController@getCursosByPlanEstudioYCarrera');
 
     $router->get('cursos/plan-estudio/{planEstudioId}/{carreraId}/{alumnoId}', 'CursoController@getCursosByPlanEstudioYCarrera');
@@ -240,6 +242,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('alumnos/logged/{alumno_id}/{dominio}', 'AlumnoController@getLoggedAlumno');
     $router->get('alumnos/{dominio}', 'AlumnoController@index');
     $router->post('alumnos', 'AlumnoController@store');
+    $router->post('alumnos-masivos', 'AlumnoController@storeMasivos');
     $router->get('/alumno/{id}', 'AlumnoController@show');
     $router->put('alumnos/{id}/{domain_id}', 'AlumnoController@update');
     $router->delete('alumnos/{id}/{dominio}', 'AlumnoController@destroy');
