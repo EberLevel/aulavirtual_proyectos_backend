@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class EvaluacionesController extends Controller
 {
@@ -122,48 +124,175 @@ class EvaluacionesController extends Controller
      */
     public function store(Request $request)
     {
+        try {
+            // Debug: Mostrar todos los datos recibidos
+            Log::info('Datos recibidos en store:', $request->all());
 
-        return $request->input('texto_enrriquesido');
-        $validatedData = $this->validate($request, [
-            'nombre' => 'required|string|max:255',
-            'tipo_evaluacion_id' => 'nullable|exists:t_g_parametros,nu_id_parametro',
-            'porcentaje_evaluacion' => 'nullable|numeric',
-            'porcentaje_asignado' => 'nullable|numeric', // Validamos el nuevo campo
-            'fecha_y_hora_programo' => 'required|date',
-            'observaciones' => 'nullable|string',
-            'estado_id' => 'required',
-            'domain_id' => 'required|integer',
-            'grupo_de_evaluaciones_id' => 'required|integer',
-            'modalidad' => 'required|in:0,1',
-            'recursos' => 'array', // Puede ser un array de archivos
-            'recursos.*' => 'file|max:10240'
-        ]);
+            // Crear el validador manualmente para Lumen
+            $validator = Validator::make($request->all(), [
+                'nombre' => 'required|string|max:255',
+                'tipo_evaluacion_id' => 'nullable|exists:t_g_parametros,nu_id_parametro',
+                'porcentaje_evaluacion' => 'nullable|numeric',
+                'porcentaje_asignado' => 'nullable|numeric',
+                'fecha_y_hora_programo' => 'required|date',
+                'observaciones' => 'nullable|string',
+                'texto_enrriquesido' => 'nullable|string',
+                'estado_id' => 'required|integer',
+                'domain_id' => 'required|integer',
+                'grupo_de_evaluaciones_id' => 'required|integer',
+                'modalidad' => 'required|in:0,1',
+                'recursos' => 'nullable|array',
+                'recursos.*' => 'file|max:10240'
+            ]);
 
-        $validatedData['fecha_y_hora_programo'] = Carbon::parse($validatedData['fecha_y_hora_programo'])->format('Y-m-d H:i:s');
+            // Verificar si la validación falló
+            if ($validator->fails()) {
+                Log::error('Error de validación:', $validator->errors()->toArray());
 
-        $evaluacion = Evaluaciones::create($validatedData);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
+            // Obtener los datos validados
+            $validatedData = $validator->validated();
+
+            // Formatear la fecha correctamente
+            $validatedData['fecha_y_hora_programo'] = Carbon::parse($validatedData['fecha_y_hora_programo'])
+                ->format('Y-m-d H:i:s');
+
+            // Remover 'recursos' del array de datos validados ya que no es un campo de la tabla
+            $evaluacionData = collect($validatedData)->except('recursos')->toArray();
+
+            // Crear la evaluación
+            $evaluacion = Evaluaciones::create($evaluacionData);
+
+            $fileUrls = [];
+
+            // Procesar archivos si existen
+            if ($request->hasFile('recursos')) {
+                $files = $request->file('recursos');
+
+                // Debug: verificar el tipo de datos que llega
+                Log::info('Tipo de archivos recibidos:', [
+                    'is_array' => is_array($files),
+                    'type' => gettype($files),
+                    'class' => is_object($files) ? get_class($files) : null,
+                    'count' => is_array($files) ? count($files) : 1
+                ]);
+
+                // Normalizar a array si no lo es
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+
+                Log::info('Procesando archivos:', ['count' => count($files)]);
+
+                foreach ($files as $index => $file) {
+                    // Verificar que el archivo sea válido y no sea null
+                    if ($file && $file->isValid()) {
+                        // Generar nombre único para el archivo
+                        $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+
+                        // Guardar el archivo en el disco público
+                        $path = $file->storeAs('uploads/evaluaciones', $fileName, 'public');
+
+                        // Generar URL completa
+                        $fileUrl = Storage::url($path);
+                        $fileUrls[] = $fileUrl;
+
+                        Log::info('Archivo guardado:', [
+                            'index' => $index,
+                            'original_name' => $file->getClientOriginalName(),
+                            'saved_name' => $fileName,
+                            'path' => $path,
+                            'url' => $fileUrl
+                        ]);
+                    } else {
+                        Log::error('Archivo inválido o nulo:', [
+                            'index' => $index,
+                            'file_exists' => $file !== null,
+                            'name' => $file ? $file->getClientOriginalName() : 'null',
+                            'error' => $file ? $file->getErrorMessage() : 'file is null'
+                        ]);
+                    }
+                }
+
+                // Actualizar la evaluación con las URLs de los archivos
+                if (!empty($fileUrls)) {
+                    $evaluacion->contenido = json_encode($fileUrls);
+                    $evaluacion->save();
+
+                    Log::info('URLs de archivos guardadas:', $fileUrls);
+                }
+            } else {
+                Log::info('No se enviaron archivos en la petición');
+            }
+
+            // Recargar el modelo para obtener los datos actualizados
+            $evaluacion->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'evaluación creada exitosamente',
+                'data' => [
+                    'evaluacion' => $evaluacion,
+                    'fileUrls' => $fileUrls,
+                    'totalFiles' => count($fileUrls)
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Error al crear evaluación:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Método auxiliar para manejar la subida de archivos
+     */
+    private function handleFileUploads(Request $request, $evaluacionId)
+    {
         $fileUrls = [];
 
-        // dd($request);
-        foreach ($request->file('recursos') as $file) {
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('public/uploads', $fileName);
-            $fileUrls[] = url('storage/' . str_replace('public/', '', $path));
+        if ($request->hasFile('recursos')) {
+            foreach ($request->file('recursos') as $file) {
+                if ($file->isValid()) {
+                    $fileName = $evaluacionId . '_' . time() . '_' . $file->getClientOriginalName();
+                    $path = $file->storeAs('uploads/evaluaciones', $fileName, 'public');
+                    $fileUrls[] = Storage::url($path);
+                }
+            }
         }
 
-        // Actualizar el examen con las URLs de los archivos
-        $evaluacion->contenido = json_encode($fileUrls);
-        $evaluacion->save();
-
-        return response()->json([
-            'message' => 'Examen guardado exitosamente con los archivos',
-            'fileUrls' => $fileUrls,
-            "evaluacion" => $evaluacion
-        ], 201);
+        return $fileUrls;
     }
 
 
+    /**
+     * Método para debugging - eliminar en producción
+     */
+    public function debug(Request $request)
+    {
+        return response()->json([
+            'all_data' => $request->all(),
+            'files' => $request->hasFile('recursos') ? 'Sí tiene archivos' : 'No tiene archivos',
+            'file_count' => $request->hasFile('recursos') ? count($request->file('recursos')) : 0,
+            'headers' => $request->headers->all(),
+            'content_type' => $request->header('Content-Type')
+        ]);
+
+    }
     /**
      * Display the specified resource.
      *

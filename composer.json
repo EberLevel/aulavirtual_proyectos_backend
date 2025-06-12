@@ -12,7 +12,8 @@
         "laravel/lumen-framework": "^10.0",
         "league/flysystem": "^3.28",
         "league/flysystem-local": "^3.28",
-        "spatie/image-optimizer": "^1.7"
+        "spatie/image-optimizer": "^1.7",
+        "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
