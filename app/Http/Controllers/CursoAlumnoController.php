@@ -50,8 +50,8 @@ class CursoAlumnoController extends Controller
     ->join('ciclos', 'ciclos.id', '=', 'cursos.ciclo_id')
     ->join('modulos_formativos', 'modulos_formativos.id', '=', 'cursos.modulo_formativo_id')
     ->join('area_de_formacion', 'area_de_formacion.id', '=', 'cursos.area_de_formacion_id')
-    ->join('carreras', 'carreras.id', '=', 'cursos.carrera_id') 
-    ->join('estados', 'estados.id', '=', 'cursos.estado_id')
+    ->join('carreras', 'carreras.id', '=', 'cursos.carrera_id')
+    ->join('estados', 'estados.id', '=', 'curso_alumno.estado_id')
     ->where('curso_alumno.alumno_id', $alumnoId)
     ->where('alumnos.id', $alumnoId)
     ->where('alumnos.estadoAlumno', '!=', 'RETIRADO')
@@ -76,9 +76,9 @@ class CursoAlumnoController extends Controller
                 ->leftJoin('alumnos', 'alumnos.carrera_id', '=', 'carreras.id') // Relación directa con la carrera del alumno
                 ->leftJoin('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id') // Relación con el plan de estudios
                 ->leftJoin('ciclos', 'ciclos.id', '=', 'cursos.ciclo_id') // Relación con ciclos
-                ->leftJoin('modulos_formativos', 'modulos_formativos.id', '=', 'cursos.modulo_formativo_id') 
+                ->leftJoin('modulos_formativos', 'modulos_formativos.id', '=', 'cursos.modulo_formativo_id')
                 ->leftJoin('area_de_formacion', 'area_de_formacion.id', '=', 'cursos.area_de_formacion_id')
-                ->where('alumnos.id', $alumno_id) 
+                ->where('alumnos.id', $alumno_id)
                 ->where('alumnos.estadoAlumno', '!=', 'RETIRADO')
                 ->select(
                     'cursos.*',
@@ -91,7 +91,7 @@ class CursoAlumnoController extends Controller
                     'alumnos.id as alumno_id' // ID del alumno
                 )
                 ->get();
-    
+
             return response()->json($courses);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
