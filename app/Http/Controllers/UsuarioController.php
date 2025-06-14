@@ -17,15 +17,15 @@ class UsuarioController extends Controller
         $query = DB::table('users')
             ->select('users.id', 'users.name', 'users.email', 'rol.nombre')
             ->join('rol', 'users.rol_id', '=', 'rol.id');
-    
-        if ($domain_id && $domain_id != 0) {
+
+        if ($domain_id && $domain_id != 2) {
             $query->where('users.domain_id', $domain_id);
         }
-    
+
         $users = $query->get();
         return $users;
     }
-    
+
 
     public function store(Request $request)
     {
