@@ -5,12 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Capacitacion;
 use App\Models\Docente;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CapacitacionController extends Controller
 {
     public function index()
     {
-        $capacitaciones = Capacitacion::where('estado', 1)->get();
+        $capacitaciones = Capacitacion::select(
+            'capacitaciones.*',
+            'docentes.nombres as docente_nombre',
+            'docentes.codigo as docente_codigo',
+            'estados.nombre as estado_nombre',
+            'estados.color as estado_color'
+        )
+            ->leftJoin('docentes', 'capacitaciones.docente', '=', 'docentes.id')
+            ->leftJoin('estados', 'capacitaciones.idEstado', '=', 'estados.id')
+            ->where('capacitaciones.estado', 1)
+            ->get();
+
         if ($capacitaciones) {
             return response()->json([
                 'responseCode' => 0,
@@ -84,10 +96,29 @@ class CapacitacionController extends Controller
         return response()->json(['code' => $codigo], 200);
     }
 
-
-    public function listarDocentes()
+    public function listarEstados($domain_id)
     {
-        $docentes = Docente::all();
+        $estados = DB::table('estados')
+            ->select('id', 'nombre', 'color')
+            ->where('domain_id', $domain_id)
+            ->whereNull('deleted_at')
+            ->get();
+
+        if ($estados) {
+            return response()->json([
+                'responseCode' => 0,
+                'response' => $estados
+            ], 200);
+        }
+        return response()->json('Record not found', 404);
+    }
+
+    public function listarDocentes($domain_id)
+    {
+        $docentes = Docente::select('id', 'codigo', 'nombres', 'email')
+            ->where('domain_id', $domain_id)
+            ->get();
+
         if ($docentes) {
             return response()->json([
                 'responseCode' => 0,

@@ -157,7 +157,6 @@ class CapacitacionesPostulanteController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['error' => 'Capacitación no encontrada'], 404);
         } catch (Exception $e) {
-            \Log::error('Error al actualizar validado: ' . $e->getMessage());
             return response()->json(['error' => 'Error al actualizar el estado de validación: ' . $e->getMessage()], 500);
         }
     }

@@ -220,8 +220,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('capacitaciones/{id}', 'CapacitacionController@update');
     $router->put('capacitaciones-eliminar/{id}', 'CapacitacionController@destroy');
     $router->get('capacitaciones-codigo', 'CapacitacionController@generateCode');
-    $router->get('capacitaciones-docentes', 'CapacitacionController@listarDocentes');
-
+    $router->get('capacitaciones-docentes/{domain_id}', 'CapacitacionController@listarDocentes');
+    $router->get('capacitaciones-estados/{domain_id}', 'CapacitacionController@listarEstados');
     // para pagos
     $router->get('pagos/{domain_id}', 'PagoController@index');
     $router->get('pagos/{domain_id}/{pago_id}/alumnos', 'PagoController@getPaymentByStudent');
