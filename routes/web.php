@@ -260,6 +260,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('participantes', 'ParticipanteController@store');
     $router->get('evaluacionesByalumnos/promedio/{curso_id}/{alumno_id}', 'ParticipanteController@getPromedioEvaluaciones');
     $router->get('cursos/promedio/{curso_id}', 'ParticipanteController@getPromedioCurso');
+    $router->put('participante-estado-update',  'ParticipanteController@updateEstadoCursoAlumno');
 
     //asistencia routes
     $router->get('asistencia-curso', 'AsistenciaCursoController@show');

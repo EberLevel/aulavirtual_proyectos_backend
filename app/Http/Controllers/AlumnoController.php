@@ -363,11 +363,11 @@ class AlumnoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             // Log del error para debugging
-            \Log::error('Error al crear/actualizar alumnos masivos: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // \Log::error('Error al crear/actualizar alumnos masivos: ' . $e->getMessage(), [
+            //     'file' => $e->getFile(),
+            //     'line' => $e->getLine(),
+            //     'trace' => $e->getTraceAsString()
+            // ]);
 
             return response()->json([
                 'message' => 'Error al procesar los alumnos: ' . $e->getMessage(),
