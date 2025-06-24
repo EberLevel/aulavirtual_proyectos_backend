@@ -379,7 +379,7 @@ class CursoController extends Controller
             'areaFormacionId' => 'required|integer',
             'moduloFormativoId' => 'required|integer',
             'cantidadCreditos' => 'required|integer',
-            'porcentajeCreditos' => 'required|integer',
+            'porcentajeCreditos' => 'required',
             'cantidadHoras' => 'required|integer',
             'horasPracticas' => 'required|integer',
             'carreraId' => 'required|integer',
@@ -436,7 +436,11 @@ class CursoController extends Controller
         return response()->json($courses);
     }
 
-
+    public function getTotalCreditsByCurso($domain_id)
+    {
+        $totalCreditos = Curso::where('domain_id', $domain_id)->sum('cantidad_de_creditos');
+        return response()->json(['total_creditos' => $totalCreditos], 200);
+    }
 
 
     public function destroy($id)
