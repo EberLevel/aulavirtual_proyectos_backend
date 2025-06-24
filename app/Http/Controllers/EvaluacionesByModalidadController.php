@@ -40,12 +40,22 @@ class EvaluacionesByModalidadController extends Controller
         //     ->select('alumnos.*', 'evaluaciones_alumno.nota', 'evaluaciones_alumno.asistencia', 'evaluaciones_alumno.evaluacion_id');
         // }])->find($id);
 
-        $evaluacionesAlumnos = DB::table('evaluaciones_alumno')
-            ->join('alumnos', 'alumnos.id', '=', 'evaluaciones_alumno.alumno_id')
-            ->join('evaluaciones', 'evaluaciones.id', '=', 'evaluaciones_alumno.evaluacion_id')
-            ->select('alumnos.*', 'evaluaciones_alumno.nota', 'evaluaciones_alumno.asistencia', 'evaluaciones_alumno.evaluacion_id', 'evaluaciones.tipo_evaluacion_id')
-            ->where('evaluaciones_alumno.evaluacion_id', '=', $id)
-            ->get();
+        $evaluacionesAlumnos = DB::table('evaluaciones_alumno as ea')
+        ->join('alumnos as a', 'ea.alumno_id', '=', 'a.id')
+        ->join('evaluaciones as e', 'ea.evaluacion_id', '=', 'e.id')
+        ->join('grupo_de_evaluaciones as ge', 'e.grupo_de_evaluaciones_id', '=', 'ge.id')
+        ->join('curso_alumno as ca', 'ca.alumno_id', '=', 'a.id')
+        ->select(
+            'a.*',
+            'ea.nota',
+            'ea.asistencia',
+            'ea.evaluacion_id',
+            'e.tipo_evaluacion_id'
+        )
+        ->where('ea.evaluacion_id', $id)
+        ->where('ca.estado_id', 2)
+        ->get();
+
 
 
 
