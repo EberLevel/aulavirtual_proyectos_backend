@@ -67,6 +67,7 @@ class CursoController extends Controller
             ->leftJoin('estados', 'estados.id', '=', 'cursos.estado_id') // Usar la tabla estados
             ->leftJoin('carreras', 'carreras.id', '=', 'cursos.carrera_id')
             ->leftJoin('docentes', 'docentes.id', '=', 'cursos.docente_id')
+            ->leftJoin('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
             ->where('cursos.domain_id', $domainId)
             ->select(
                 'cursos.*',
@@ -76,7 +77,9 @@ class CursoController extends Controller
                 'carreras.nombres as carrera_nombre',
                 'estados.nombre as estado_nombre', // Usar el campo nombre desde la tabla estados
                 'docentes.id as docente_id',
-                'docentes.nombres as docente_nombre'
+                'docentes.nombres as docente_nombre',
+                'plan_de_estudios.nombre as plan_estudios_nombre'
+
             )
             ->get();
 
@@ -420,6 +423,7 @@ class CursoController extends Controller
             ->leftJoin('estados', 'estados.id', '=', 'cursos.estado_id')
             ->leftJoin('carreras', 'carreras.id', '=', 'cursos.carrera_id')
             ->leftJoin('docentes', 'docentes.id', '=', 'cursos.docente_id')
+            ->leftJoin('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
             ->select(
                 'cursos.*',
                 'ciclos.nombre as ciclo_nombre',
@@ -428,7 +432,8 @@ class CursoController extends Controller
                 'carreras.nombres as carrera_nombre',
                 'estados.nombre as estado_nombre',
                 'docentes.id as docente_id',
-                'docentes.nombres as docente_nombre'
+                'docentes.nombres as docente_nombre',
+                'plan_de_estudios.nombre as plan_estudios_nombre'
             )
             ->where('cursos.domain_id', $domain_id)
             ->get();
