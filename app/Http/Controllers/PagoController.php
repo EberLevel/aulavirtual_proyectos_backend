@@ -6,6 +6,7 @@ use App\Models\Pago;
 use App\Models\PagoAlumno;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class PagoController extends Controller
 {
@@ -101,6 +102,137 @@ class PagoController extends Controller
         ]);
     }
 
+public function update(Request $request, $domain, $pago_id)
+{
+   
+    $validator = Validator::make(
+        array_merge($request->all(), ['pago_id' => $pago_id]),
+        [
+            'pago_id'           => 'required|numeric|exists:pagos,id',
+            'domain_id'         => 'required|numeric|exists:domains,id',
+            'nombre'            => 'sometimes|string|max:255',
+            'descripcion'       => 'sometimes|nullable|string',
+            'monto'             => 'sometimes|numeric|min:0',
+            'fecha_pago'        => 'sometimes|date',
+            'fecha_vencimiento' => 'sometimes|date|after_or_equal:fecha_pago',
+            'estado_id'         => 'sometimes|numeric|exists:estados,id',
+        ]
+    );
+    if ($validator->fails()) {
+        return response()->json([
+            'responseCode' => 422,
+            'message'      => 'Datos inválidos.',
+            'errors'       => $validator->errors(),
+        ], 422);
+    }
+    $data = $validator->validated();
+    // 2. Buscamos el pago asegurándonos que pertenezca al domain_id del body
+    $pago = Pago::where('id', $data['pago_id'])
+                ->where('domain_id', $data['domain_id'])
+                ->first();
+
+    if (! $pago) {
+        return response()->json([
+            'responseCode'=>404,
+            'message'     =>'Pago no encontrado para este dominio.'
+        ], 404);
+    }
+    // 3. Actualizamos únicamente los campos que mandó el body
+    $pago->update(
+        collect($data)
+            ->only(['nombre','descripcion','monto','fecha_pago','fecha_vencimiento','estado_id'])
+            ->toArray()
+    );
+    return response()->json([
+        'responseCode'=>200,
+        'message'     =>'Pago actualizado con éxito',
+        'data'        =>$pago
+    ], 200);
+}
+
+public function destroy(Request $request, $domain, $pago_id)
+{
+    // 1) Mezclamos el pago_id de la ruta con lo que venga en el body
+    $data = array_merge($request->all(), ['pago_id' => $pago_id]);
+
+    // 2) Validamos
+    $validator = Validator::make($data, [
+        'pago_id'   => 'required|numeric|exists:pagos,id',
+        'domain_id' => 'required|numeric|exists:domains,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'responseCode' => 422,
+            'message'      => 'Datos inválidos.',
+            'errors'       => $validator->errors(),
+        ], 422);
+    }
+
+    // 3) Buscamos el pago que coincida con id y domain_id
+    $pago = Pago::where('id', $data['pago_id'])
+                ->where('domain_id', $data['domain_id'])
+                ->first();
+
+    if (!$pago) {
+        return response()->json([
+            'responseCode' => 404,
+            'message'      => 'Pago no encontrado para este dominio.',
+        ], 404);
+    }
+
+    // 4) Eliminamos
+    $pago->delete();
+
+    return response()->json([
+        'responseCode' => 200,
+        'message'      => 'Pago eliminado con éxito.'
+    ], 200);
+}
+
+
+  public function uploadVoucher(Request $request, $domain, $pago_id)
+{
+    // 1) valida con el facade Validator
+    $validator = Validator::make($request->all(), [
+        'domain_id'    => 'required|numeric|exists:domains,id',
+        'voucher_pago' => 'required|file|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'responseCode' => 422,
+            'message'      => 'Datos inválidos.',
+            'errors'       => $validator->errors(),
+        ], 422);
+    }
+
+    // 2) recupera los datos validados
+    $data = $validator->validated();
+
+    // 3) busca el pago
+    $pago = Pago::where('id', $pago_id)
+                ->where('domain_id', $data['domain_id'])
+                ->firstOrFail();
+
+    // 4) convierte a base64
+    $file   = $request->file('voucher_pago');
+    $base64 = 'data:'.$file->getMimeType().';base64,'.
+              base64_encode(file_get_contents($file->getRealPath()));
+
+    // 5) guarda
+    $pago->voucher_pago = $base64;
+    $pago->estado_id   = 2;
+    $pago->save();
+
+    // 6) responde
+    return response()->json([
+      'responseCode' => 200,
+      'message'      => 'Comprobante subido con éxito.',
+      'data'         => $pago->only('id','voucher_pago'),
+    ], 200);
+}
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -138,58 +270,160 @@ class PagoController extends Controller
         }
     }
 
+    // public function assignPayment(Request $request)
+    // {
+    //     $data = $request->all();
+
+    //     $validator = Validator::make(
+    //         $request->all(),
+    //         [
+    //             'pago_id' => 'required|exists:pagos,id',
+    //             'alumnos' => 'required|array',
+    //             'alumnos.*' => 'required|exists:alumnos,id',
+    //         ]
+    //     );
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'responseCode' => 422,
+    //             'message' => 'Datos inválidos.',
+    //             'errors' => $validator->errors(),
+    //         ], 422);
+    //     }
+
+    //     $pagoId = $data['pago_id'];
+    //     $alumnos  = $data['alumnos'];
+    //     $estado = $data['estado'];
+
+    //     foreach ($alumnos as $alumnoId) {
+    //         $exists = PagoAlumno::where('pago_id', $pagoId)
+    //             ->where('alumno_id', $alumnoId)
+    //             ->exists();
+
+    //         if ($exists) {
+    //             return response()->json([
+    //                 'responseCode' => 422,
+    //                 'message' => "El alumno con ID $alumnoId ya está asignado al pago.",
+    //             ], 422);
+    //         }
+    //     }
+
+    //     foreach ($alumnos as $alumnoId) {
+    //         PagoAlumno::create(
+    //             [
+    //                 'pago_id' => $pagoId,
+    //                 'alumno_id' => $alumnoId,
+    //                 'estado_id' => $estado
+    //             ]
+    //         );
+    //     }
+
+    //     return response()->json([
+    //         'responseCode' => 200,
+    //         'message' => 'Pago asignado con éxito a los alumnos.',
+    //     ]);
+    // } 
+
     public function assignPayment(Request $request)
     {
+        /* ---------- 1. VALIDACIÓN ---------- */
         $data = $request->all();
 
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'pago_id' => 'required|exists:pagos,id',
-                'alumnos' => 'required|array',
-                'alumnos.*' => 'required|exists:alumnos,id',
-            ]
-        );
+        $validator = Validator::make($data, [
+            'pago_id'           => 'required|exists:pagos,id',
+            'estado'            => 'required|numeric|exists:estados,id',
+            'alumnos'           => 'required|array',
+            'alumnos.*.id'      => 'required|exists:alumnos,id',
+            'alumnos.*.checked' => 'required|boolean',
+        ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'responseCode' => 422,
-                'message' => 'Datos inválidos.',
-                'errors' => $validator->errors(),
+                'message'      => 'Datos inválidos.',
+                'errors'       => $validator->errors(),
             ], 422);
         }
 
-        $pagoId = $data['pago_id'];
-        $alumnos  = $data['alumnos'];
-        $estado = $data['estado'];
+        /* ---------- 2. VARIABLES ---------- */
+        $pagoId  = $data['pago_id'];
+        $estado  = $data['estado'];
+        $alumnos = collect($data['alumnos']);
 
-        foreach ($alumnos as $alumnoId) {
-            $exists = PagoAlumno::where('pago_id', $pagoId)
-                ->where('alumno_id', $alumnoId)
-                ->exists();
+        /* ---------- 3. ALUMNOS YA VINCULADOS A ESTE PAGO ---------- */
+        $vinculados = PagoAlumno::where('pago_id', $pagoId)
+                        ->pluck('alumno_id')
+                        ->toArray();
 
-            if ($exists) {
-                return response()->json([
-                    'responseCode' => 422,
-                    'message' => "El alumno con ID $alumnoId ya está asignado al pago.",
-                ], 422);
+        /* ---------- 4. PROCESAMOS EN UNA TRANSACCIÓN ---------- */
+        DB::beginTransaction();
+
+        try {
+
+            /* Para actualizar la columna checked en bloque */
+            $idsMarcados   = [];  // quedarán con checked = 1
+            $idsDesmarcados= [];  // quedarán con checked = 0
+
+            foreach ($alumnos as $item) {
+                $alumnoId = $item['id'];
+                $checked  = (bool) $item['checked'];
+
+                if ($checked) {
+
+                    // ➕ crea vínculo si aún no existe
+                    if (!in_array($alumnoId, $vinculados)) {
+                        PagoAlumno::create([
+                            'pago_id'   => $pagoId,
+                            'alumno_id' => $alumnoId,
+                            'estado_id' => $estado,
+                        ]);
+                    }
+
+                    $idsMarcados[] = $alumnoId;
+
+                } else {
+
+                    // ➖ elimina vínculo si existía
+                    if (in_array($alumnoId, $vinculados)) {
+                        PagoAlumno::where('pago_id',  $pagoId)
+                                ->where('alumno_id',$alumnoId)
+                                ->delete();
+                    }
+
+                    $idsDesmarcados[] = $alumnoId;
+                }
             }
-        }
 
-        foreach ($alumnos as $alumnoId) {
-            PagoAlumno::create(
-                [
-                    'pago_id' => $pagoId,
-                    'alumno_id' => $alumnoId,
-                    'estado_id' => $estado
-                ]
-            );
-        }
+            /* ---------- 5. ACTUALIZAMOS COLUMNA `checked` EN ALUMNOS ---------- */
+            if (!empty($idsMarcados)) {
+                DB::table('alumnos')
+                ->whereIn('id', $idsMarcados)
+                ->update(['checked' => 1]);
+            }
 
-        return response()->json([
-            'responseCode' => 200,
-            'message' => 'Pago asignado con éxito a los alumnos.',
-        ]);
+            if (!empty($idsDesmarcados)) {
+                DB::table('alumnos')
+                ->whereIn('id', $idsDesmarcados)
+                ->update(['checked' => 0]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'responseCode' => 200,
+                'message'      => 'Vinculaciones de pago actualizadas con éxito.',
+            ], 200);
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'responseCode' => 500,
+                'message'      => 'Error al guardar los cambios.',
+                'error'        => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function uploadPaymentByStudent(Request $request)

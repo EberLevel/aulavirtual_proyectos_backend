@@ -231,6 +231,9 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('pagos-por-alumnos', 'PagoController@uploadPaymentByStudent');
     $router->post('pagos/{domain_id}/validar-pago', 'PagoController@validPayment');
 
+    $router->put('pagos/{pago_id}', 'PagoController@update');
+    $router->delete('pagos/{pago_id}', 'PagoController@destroy');  
+    $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher'); 
 
     $router->get('grupo-de-evaluaciones/{curso_id}', 'GrupoDeEvaluacionesController@index');
     $router->post('grupo-de-evaluaciones', 'GrupoDeEvaluacionesController@store');
@@ -249,8 +252,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('alumnos/{id}/{dominio}', 'AlumnoController@destroy');
     $router->post('alumnos/{id}/{dominio}', 'AlumnoController@paymentByStudent');
     $router->post('alumnos/subir-comprobante', 'AlumnoController@subirComprobante');
-
-
+ 
 
     //horario routes
     $router->get('horario', 'HorarioController@index');
@@ -426,10 +428,13 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('pregunta-alumno', 'PreguntaAlumnoController@actualizarEstado');
     $router->get('suma-calificaciones', 'PreguntaAlumnoController@obtenerSumaCalificaciones');
 
+
+
+
+
     //ObteberAlumnoPorEvaluacion
     $router->get('evaluacionesByalumnos/{id}', 'EvaluacionesByModalidadController@obtenerAlumnosPorEvaluacion');
     $router->post('evaluacionesByalumnos/guardarNotas', 'EvaluacionesByModalidadController@guardarNotas');
-
 
 
     Route::get('cursos/{curso_id}/evaluaciones', 'PreguntaAlumnoController@obtenerCursosConEvaluaciones');
