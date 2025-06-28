@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PagoAlumno;
 
 class Pago extends Model
 {
@@ -21,4 +22,9 @@ class Pago extends Model
     {
         return $this->belongsTo(Estado::class, 'estado_id');
     }
+
+    public function pagoAlumnos()
+        {
+            return $this->hasMany(PagoAlumno::class, 'pago_id');
+        }
 }

@@ -12,6 +12,8 @@ class PagoController extends Controller
 {
     public function index($domain_id)
     {
+         ini_set('max_execution_time', 120); // aumentar tiempo de ejecución
+
         $validator = Validator::make(
             ['domain_id' => $domain_id],
             ['domain_id' => 'required|numeric']
@@ -40,8 +42,8 @@ class PagoController extends Controller
             'responseCode' => 200,
             'response' => $pagos
         ], 200);
-    }
-
+    } 
+ 
     public function getPaymentByStudent($domain_id, $pago_id)
     {
         $validator = Validator::make(
@@ -149,6 +151,50 @@ public function update(Request $request, $domain, $pago_id)
         'data'        =>$pago
     ], 200);
 }
+
+public function getPagosPorAlumno($domain_id, $alumno_id)
+{
+    // Aumentar el tiempo máximo de ejecución (para evitar timeout por muchos datos)
+    set_time_limit(120);
+
+    // Validar solo el alumno_id, ya no usamos domain_id
+    $validator = Validator::make(
+        ['alumno_id' => $alumno_id],
+        [
+            'alumno_id'  => 'required|numeric|exists:alumnos,id',
+        ]
+    );
+
+    if ($validator->fails()) {
+        return response()->json([
+            'responseCode' => 422,
+            'message' => 'Datos inválidos.',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    // Obtener los pagos relacionados al alumno, con los estados
+    $pagos = Pago::with('estados')
+        ->whereHas('pagoAlumnos', function ($query) use ($alumno_id) {
+            $query->where('alumno_id', $alumno_id);
+        })
+        ->limit(50) // <-- solo trae 50 registros por prueba. Puedes quitar esto si ya jala rápido.
+        ->get();
+
+    if ($pagos->isEmpty()) {
+        return response()->json([
+            'responseCode' => 404,
+            'message' => 'No se encontraron pagos asignados para este alumno.',
+        ], 404);
+    }
+
+    return response()->json([
+        'responseCode' => 200,
+        'response' => $pagos
+    ], 200);
+}
+ 
+
 
 public function destroy(Request $request, $domain, $pago_id)
 {
