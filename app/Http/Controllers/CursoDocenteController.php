@@ -18,6 +18,7 @@ class CursoDocenteController extends Controller
                 ->leftJoin('estados', 'estados.id', '=', 'cursos.estado_id')  // Reemplaza t_g_parametros con estados
                 ->leftJoin('carreras', 'carreras.id', '=', 'cursos.carrera_id')
                 ->leftJoin('docentes', 'docentes.id', '=', 'cursos.docente_id')
+                ->leftJoin('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')  // Reemplaza t_g_parametros con plan_de_estudios
                 ->where('cursos.docente_id', $docente_id)
                 ->select(
                     'cursos.*',
@@ -26,7 +27,8 @@ class CursoDocenteController extends Controller
                     'area_de_formacion.nombre as area_de_formacion_nombre',  // Obtiene el nombre del área de formación
                     'carreras.nombres as carrera_nombre',
                     'estados.nombre as estado_nombre',  // Obtiene el nombre del estado
-                    'docentes.id as docente_id'
+                    'docentes.id as docente_id',
+                    'plan_de_estudios.nombre as plan_estudios_nombre'
                 )
                 ->get();
 
