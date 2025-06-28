@@ -117,6 +117,7 @@ class CursoAlumnoController extends Controller
                 'curso_alumno.estado_id as estado_id',
                 'estado_curso_alumno.id',
                 'estado_curso_alumno.color',
+                'plan_de_estudios.nombre as plan_estudio_nombre',
                 DB::raw("IF(estado_curso_alumno.nombre IS NULL, 'PENDIENTE', estado_curso_alumno.nombre) as estadoCursoAlumno")
             )
             ->get();
