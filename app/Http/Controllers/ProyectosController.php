@@ -36,7 +36,6 @@ class ProyectosController extends Controller
 
     public function store(Request $request)
     {
-        \Log::info('Request data:', $request->all());
         $this->validate($request, [
             'estado' => 'required|string|max:20',
             'nombre' => 'required|string|max:191',
@@ -52,7 +51,6 @@ class ProyectosController extends Controller
 
     public function update(Request $request, $id)
     {
-        \Log::info('Request data:', $request->all());
         $this->validate($request, [
             'estado' => 'required|string|max:20',
             'nombre' => 'required|string|max:191',
@@ -108,7 +106,10 @@ class ProyectosController extends Controller
         }
 
         // Ordenar las tareas por el campo 'prioridad' de manera ascendente
-        $modulos = $proyecto->modulos()->orderBy('prioridad', 'asc')->get();
+        $modulos = $proyecto->modulos()
+        ->leftJoin('tareas', 'proyecto_modulo.tarea_id', '=', 'tareas.id')
+        ->select('proyecto_modulo.*', 'tareas.name as tarea_nombre')
+        ->orderBy('proyecto_modulo.prioridad', 'asc')->get();
 
         return response()->json(['data' => $modulos], 200);
     }
@@ -121,7 +122,8 @@ class ProyectosController extends Controller
             'estado' => 'required|string|max:20',
             'grupo' => 'nullable|string|max:50',
             'responsable' => 'nullable|string|max:50',
-            'decripcion' => 'nulable|string'
+            'decripcion' => 'nullable|string',
+            'tarea_id' => 'sometimes|required',
         ]);
 
         $proyecto = Proyecto::find($proyectoId);
@@ -151,7 +153,7 @@ class ProyectosController extends Controller
 
         $tareas = $modulo->tareas()->orderBy('prioridad', 'asc')->get();
 
-        $tareasConImagenes = $tareas->map(function ($tarea) {
+        $tareasConImagenes = $tareas->map(function ($tarea) use ($modulo){
             $tieneImagenes = $tarea->archivos()->exists(); // Cambia "imagenes" por "archivos"
             return [
                 'id' => $tarea->id,
@@ -161,6 +163,7 @@ class ProyectosController extends Controller
                 'grupo' => $tarea->grupo,
                 'responsable' => $tarea->responsable,
                 'hasImage' => $tieneImagenes,
+                'tarea_id' => $modulo->tarea_id,
             ];
         });
 
@@ -169,6 +172,7 @@ class ProyectosController extends Controller
 
 
     // Añadir una tarea a un proyecto
+    /*
     public function anadirTarea(Request $request, $proyectoId, $moduloId)
     {
         $this->validate($request, [
@@ -205,13 +209,62 @@ class ProyectosController extends Controller
             'data' => $tarea,
             'mdoulo' => $modulo->id
         ], 201);
+    }*/
+
+    // Añadir una tarea a un proyecto
+    public function anadirTarea(Request $request, $proyectoId, $moduloId)
+    {
+        $this->validate($request, [
+            'nombre' => 'sometimes|string|max:191',
+            'prioridad' => 'required|string|max:20',
+            'estado' => 'required|string|max:20',
+            'grupo' => 'nullable|string|max:50',
+            'responsable' => 'nullable|string|max:50',
+            'descripcion' => 'nullable|string',
+            'archivos' => 'array',
+            'archivos.*' => 'required|string',
+            'tarea_id' => 'required|integer', // Agregar validación para tarea_id
+        ]);
+
+        $modulo = ProyectoModulo::where('tarea_id', $request->input('tarea_id'))
+                            ->where('proyecto_id', $proyectoId)
+                            ->first();
+
+        if (!$modulo) {
+            error_log("Módulo no encontrado");
+            return response()->json(['message' => 'Modulo no encontrado'], 404);
+        }
+
+        error_log("Módulo encontrado: " . $modulo->id);
+
+        // Crear la tarea incluyendo el módulo_id
+        $tarea = new ProyectoTarea(array_merge(
+            $request->except('tarea_id'),
+            ['proyecto_modulo_id' => $modulo->id]
+        ));
+        $tarea->save();
+
+        // Guardar los archivos en la tabla proyecto_tarea_archivos
+        if ($request->has('archivos')) {
+            foreach ($request->input('archivos') as $contenido) {
+                $tarea->archivos()->create([
+                    'contenido' => $contenido,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Tarea añadida correctamente al modulo',
+            'data' => $tarea,
+            'modulo' => $modulo->id
+        ], 201);
     }
 
 
     // Actualizar una tarea de un proyecto
-    public function actualizarTarea(Request $request, $proyectoId, $moduloId, $tareaId)
+    /*public function actualizarTarea(Request $request, $proyectoId, $moduloId, $tareaId)
     {
-        $this->validate($request, [
+        $this->validate($request, rules: [
             'nombre' => 'sometimes|string|max:191',
             'prioridad' => 'sometimes|required|string|max:20',
             'estado' => 'sometimes|required|string|max:20',
@@ -220,6 +273,7 @@ class ProyectosController extends Controller
             'decripcion' => 'nulable|string',
             'archivos' => 'array',  // Validar que archivos es un arreglo
             'archivos.*' => 'required|string',  // Cada archivo debe ser un string base64
+            'tarea_id'=> 'sometimes|required',  // Validar que tarea es un arreglo
         ]);
 
         $modulo = ProyectoModulo::find($moduloId);
@@ -253,7 +307,67 @@ class ProyectosController extends Controller
             'message' => 'Tarea actualizada correctamente',
             'data' => $tarea,
         ], 200);
+    }*/
+
+    public function actualizarTarea(Request $request, $proyectoId, $moduloId, $tareaId)
+    {
+        $this->validate($request, [
+            'nombre' => 'sometimes|string|max:191',
+            'prioridad' => 'sometimes|required|string|max:20',
+            'estado' => 'sometimes|required|string|max:20',
+            'grupo' => 'nullable|string|max:50',
+            'responsable' => 'nullable|string|max:50',
+            'descripcion' => 'nullable|string',
+            'archivos' => 'array',
+            'archivos.*' => 'required|string',
+            'tarea_id' => 'required|integer',
+        ]);
+
+        $modulo = ProyectoModulo::where('tarea_id', $request->input('tarea_id'))
+                            ->where('proyecto_id', $proyectoId)
+                            ->first();
+
+        if (!$modulo) {
+            error_log("Módulo no encontrado");
+            return response()->json(['message' => 'Modulo no encontrado'], 404);
+        }
+
+        error_log("Módulo encontrado: " . $modulo->id);
+
+        // Buscar la tarea directamente por su ID
+        $tarea = ProyectoTarea::find($tareaId);
+
+        if (!$tarea) {
+            error_log("Tarea no encontrada con ID: " . $tareaId);
+            return response()->json(['message' => 'Tarea no encontrada'], 404);
+        }
+
+        error_log("Tarea encontrada: " . $tarea->id);
+
+        // Actualizar la tarea incluyendo el módulo_id
+        $tarea->update(array_merge(
+            $request->except('tarea_id'),
+            ['proyecto_modulo_id' => $modulo->id]
+        ));
+
+        // Eliminar todos los archivos existentes de la tarea
+        $tarea->archivos()->delete();
+
+        // Guardar los nuevos archivos
+        if ($request->has('archivos')) {
+            foreach ($request->input('archivos') as $contenido) {
+                $tarea->archivos()->create([
+                    'contenido' => $contenido,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Tarea actualizada correctamente',
+            'data' => $tarea,
+        ], 200);
     }
+
 
     public function actualizarModulo(Request $request, $proyectoId, $moduloId)
     {
@@ -263,7 +377,8 @@ class ProyectosController extends Controller
             'estado' => 'sometimes|required|string|max:20',
             'grupo' => 'nullable|string|max:50',
             'responsable' => 'nullable|string|max:50',
-            'decripcion' => 'nulable|string'
+            'decripcion' => 'nullable|string',
+            'tarea_id' => 'sometimes|required',
         ]);
 
         $proyecto = Proyecto::find($proyectoId);
@@ -340,7 +455,7 @@ class ProyectosController extends Controller
 
         // Buscar la tarea específica dentro del proyecto
         $tarea = ProyectoTarea::where('proyecto_modulo_id', $modulo->id)
-            ->with('archivos')  // Cargar los archivos relacionados
+            ->with(['archivos','modulo'])  // Cargar los archivos relacionados
             ->find($tareaId);
 
         if (!$tarea) {

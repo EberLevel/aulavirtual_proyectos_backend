@@ -8,17 +8,20 @@ use Illuminate\Database\Eloquent\Model;
 class ProyectoTarea extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'proyecto_tarea';
 
     protected $fillable = [
-        'nombre', 
+        'nombre',
         'prioridad',
         'estado',
         'grupo',
         'responsable',
         'descripcion',
-        'proyecto_modulo_id'
+        'proyecto_modulo_id',
+        'observaciones',
+        'respuesta_proveedor',
+        'respuesta_cliente',
     ];
 
     public function modulo()
