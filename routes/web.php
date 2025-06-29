@@ -232,8 +232,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('pagos/{domain_id}/validar-pago', 'PagoController@validPayment');
 
     $router->put('pagos/{pago_id}', 'PagoController@update');
-    $router->delete('pagos/{pago_id}', 'PagoController@destroy');  
-    $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher'); 
+    $router->delete('pagos/{pago_id}', 'PagoController@destroy');
+    $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher');
 
     $router->get('grupo-de-evaluaciones/{curso_id}', 'GrupoDeEvaluacionesController@index');
     $router->post('grupo-de-evaluaciones', 'GrupoDeEvaluacionesController@store');
@@ -252,7 +252,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->delete('alumnos/{id}/{dominio}', 'AlumnoController@destroy');
     $router->post('alumnos/{id}/{dominio}', 'AlumnoController@paymentByStudent');
     $router->post('alumnos/subir-comprobante', 'AlumnoController@subirComprobante');
- 
+
 
     //horario routes
     $router->get('horario', 'HorarioController@index');
@@ -518,4 +518,12 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('reuniones/{id}', 'ReunionController@show');
     $router->put('reuniones/{id}', 'ReunionController@update');
     $router->post('reuniones/{id}/fotos', 'ReunionController@storeFoto');
+
+    //crud tareas
+    $router->get('tareas', 'TareasController@index');
+    $router->post('tareas', 'TareasController@store');
+    $router->get('tareas/{id}', 'TareasController@show');
+    $router->put('tareas/{id}', 'TareasController@update');
+    $router->delete('tareas/{id}', 'TareasController@destroy');
+
 });
