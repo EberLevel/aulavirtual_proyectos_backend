@@ -234,6 +234,11 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('pagos/{pago_id}', 'PagoController@update');
     $router->delete('pagos/{pago_id}', 'PagoController@destroy');
     $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher');
+    $router->get('pagos-alumno/{domain_id}/{alumno_id}', 'PagoController@getPagosPorAlumno');
+
+
+    $router->delete('pagos/{pago_id}', 'PagoController@destroy');
+    $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher');
 
     $router->get('grupo-de-evaluaciones/{curso_id}', 'GrupoDeEvaluacionesController@index');
     $router->post('grupo-de-evaluaciones', 'GrupoDeEvaluacionesController@store');
