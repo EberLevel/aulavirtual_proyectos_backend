@@ -230,7 +230,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('asignar-pagos', 'PagoController@assignPayment');
     $router->post('pagos-por-alumnos', 'PagoController@uploadPaymentByStudent');
     $router->post('pagos/{domain_id}/validar-pago', 'PagoController@validPayment');
-
+    $router->delete('pagos/{domain_id}/eliminar-voucher', 'PagoController@eliminarVoucherAlumno');
     $router->put('pagos/{pago_id}', 'PagoController@update');
     $router->delete('pagos/{pago_id}', 'PagoController@destroy');
     $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher');
