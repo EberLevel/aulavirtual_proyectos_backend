@@ -533,5 +533,6 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->put('tareas/{id}', 'TareasController@update');
     $router->delete('tareas/{id}', 'TareasController@destroy');
     $router->get('proyectos/{proyectoId}/tareas', 'TareasController@getByProyecto');
+    $router->get('tareas/{proyectoId}/modulos', 'TareasController@getByModuloProyecto');
 
 });
