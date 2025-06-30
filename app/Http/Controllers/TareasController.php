@@ -16,7 +16,7 @@ class TareasController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Tarea::query();
+            $query = Tarea::with('proyecto:id,nombre');
 
             // Filtros opcionales
             if ($request->has('name')) {
@@ -68,6 +68,8 @@ class TareasController extends Controller
             $tarea = Tarea::create([
                 'name'=> $request->name,
                 'descripcion' => $request->descripcion,
+                'proyecto_id' => $request->proyecto_id,
+
             ]);
 
             return response()->json([
@@ -124,6 +126,8 @@ class TareasController extends Controller
             $tarea->update([
                 'name' => $request->name,
                 'descripcion' => $request->descripcion,
+                'proyecto_id' => $request->proyecto_id,
+
             ]);
 
             return response()->json([
@@ -170,6 +174,31 @@ class TareasController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error al eliminar la tarea',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+     /**
+     * Obtener tareas por proyecto
+     * GET /api/proyectos/{proyectoId}/tareas
+     */
+    public function getByProyecto($proyectoId): JsonResponse
+    {
+        try {
+            $query = Tarea::where('proyecto_id', $proyectoId);
+
+            $tareas = $query->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $tareas
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener las tareas del proyecto',
                 'error' => $e->getMessage()
             ], 500);
         }

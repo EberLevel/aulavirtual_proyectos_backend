@@ -18,7 +18,8 @@ class Tarea extends Model
     protected $fillable = [
         'name',
         'created_at',
-        'descripcion'
+        'descripcion',
+        'proyecto_id',
     ];
 
     protected $casts = [
@@ -37,6 +38,10 @@ class Tarea extends Model
         });
     }
 
+    public function proyecto()
+    {
+        return $this->belongsTo(Proyecto::class);
+    }
     // Scopes para filtros
     public function scopeByName($query, $name)
     {
@@ -51,5 +56,10 @@ class Tarea extends Model
     public function scopeRecent($query)
     {
         return $query->orderBy('created_at', 'desc');
+    }
+
+    public function tareas()
+    {
+        return $this->hasMany(Tarea::class);
     }
 }

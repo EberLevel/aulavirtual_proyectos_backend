@@ -482,6 +482,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('proyectos/{proyectoId}/modulos/{moduloId}/tareas', 'ProyectosController@anadirTarea'); // Añadir una tarea a un proyecto
     $router->put('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}', 'ProyectosController@actualizarTarea'); // Actualizar una tarea de un proyecto
     $router->delete('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}', 'ProyectosController@eliminarTarea'); // Eliminar una tarea de un proyecto
+    $router->put('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}/estado', 'ProyectosController@updateTareaEstado');
+
 
     //Candidatos
     $router->get('candidatos/domain/{domain_id}', 'CandidatoController@index');
@@ -530,5 +532,6 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('tareas/{id}', 'TareasController@show');
     $router->put('tareas/{id}', 'TareasController@update');
     $router->delete('tareas/{id}', 'TareasController@destroy');
+    $router->get('proyectos/{proyectoId}/tareas', 'TareasController@getByProyecto');
 
 });

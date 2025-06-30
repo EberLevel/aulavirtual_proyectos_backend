@@ -6,6 +6,7 @@ use App\Models\Proyecto;
 use App\Models\ProyectoModulo;
 use App\Models\ProyectoTarea;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ProyectosController extends Controller
 {
@@ -482,5 +483,82 @@ class ProyectosController extends Controller
         }
 
         return response()->json(['data' => $modulo], 200);
+    }
+
+
+    public function updateTareaEstado(Request $request, $proyectoId, $moduloId, $tareaId)
+    {
+        try {
+            // Validar el request
+            $validator = Validator::make($request->all(), [
+                'estado' => 'required|string|in:PENDIENTE,EN PROCESO,OBSERVADO,REVISIÓN,RETRASADO,APROBADO'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Datos de entrada inválidos',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            // Verificar que el proyecto existe
+            $proyecto = Proyecto::findOrFail($proyectoId); // Cambié $projectId por $proyectoId
+
+            // Verificar que el módulo pertenece al proyecto
+            $modulo = ProyectoModulo::where('id', $moduloId)
+                ->where('proyecto_id', $proyectoId) // Cambié $projectId por $proyectoId
+                ->firstOrFail();
+
+            // Buscar la tarea que pertenece al módulo
+            $tarea = ProyectoTarea::where('id', $tareaId)
+                ->where('proyecto_modulo_id', $moduloId)
+                ->firstOrFail();
+
+            // Guardar el estado anterior para log (opcional)
+            $estadoAnterior = $tarea->estado;
+
+            // Actualizar el estado
+            $tarea->estado = $validated['estado'];
+            $tarea->save();
+
+            // Respuesta exitosa
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado de la tarea actualizado correctamente',
+                'data' => [
+                    'id' => $tarea->id,
+                    'estado' => $tarea->estado,
+                    'nombre' => $tarea->nombre,
+                    'prioridad' => $tarea->prioridad,
+                    'descripcion' => $tarea->descripcion,
+                    'updated_at' => $tarea->updated_at->format('Y-m-d H:i:s')
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos de entrada inválidos',
+                'errors' => $e->errors()
+            ], 422);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Recurso no encontrado',
+                'error' => 'La tarea, módulo o proyecto especificado no existe'
+            ], 404);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor',
+                'error' => 'No se pudo actualizar el estado de la tarea',
+                'debug' => $e->getMessage() // Solo para debugging, remover en producción
+            ], 500);
+        }
     }
 }
