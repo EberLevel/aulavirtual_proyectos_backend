@@ -224,13 +224,13 @@ class PagoController extends Controller
     {
         // 1) Mezclamos el pago_id de la ruta con lo que venga en el body
         $data = array_merge($request->all(), ['pago_id' => $pago_id]);
-
+    
         // 2) Validamos
         $validator = Validator::make($data, [
             'pago_id'   => 'required|numeric|exists:pagos,id',
             'domain_id' => 'required|numeric|exists:domains,id',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json([
                 'responseCode' => 422,
@@ -238,26 +238,45 @@ class PagoController extends Controller
                 'errors'       => $validator->errors(),
             ], 422);
         }
-
+    
         // 3) Buscamos el pago que coincida con id y domain_id
         $pago = Pago::where('id', $data['pago_id'])
             ->where('domain_id', $data['domain_id'])
             ->first();
-
+    
         if (!$pago) {
             return response()->json([
                 'responseCode' => 404,
                 'message'      => 'Pago no encontrado para este dominio.',
             ], 404);
         }
-
-        // 4) Eliminamos
-        $pago->delete();
-
-        return response()->json([
-            'responseCode' => 200,
-            'message'      => 'Pago eliminado con éxito.'
-        ], 200);
+    
+        // ✅ NUEVO: 4) Usar transacción para eliminar vínculos primero
+        DB::beginTransaction();
+        
+        try {
+            // Eliminar primero todos los vínculos con alumnos
+            PagoAlumno::where('pago_id', $data['pago_id'])->delete();
+            
+            // Ahora eliminar el pago
+            $pago->delete();
+            
+            DB::commit();
+            
+            return response()->json([
+                'responseCode' => 200,
+                'message'      => 'Pago eliminado con éxito.'
+            ], 200);
+            
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            return response()->json([
+                'responseCode' => 500,
+                'message'      => 'Error al eliminar el pago.',
+                'error'        => $e->getMessage()
+            ], 500);
+        }
     }
 
 
