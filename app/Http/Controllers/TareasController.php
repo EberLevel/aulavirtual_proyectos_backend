@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tarea;
+use App\Models\ProyectoModulo;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
@@ -16,7 +17,7 @@ class TareasController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Tarea::query();
+            $query = Tarea::with('proyecto:id,nombre');
 
             // Filtros opcionales
             if ($request->has('name')) {
@@ -68,6 +69,8 @@ class TareasController extends Controller
             $tarea = Tarea::create([
                 'name'=> $request->name,
                 'descripcion' => $request->descripcion,
+                'proyecto_id' => $request->proyecto_id,
+
             ]);
 
             return response()->json([
@@ -124,6 +127,8 @@ class TareasController extends Controller
             $tarea->update([
                 'name' => $request->name,
                 'descripcion' => $request->descripcion,
+                'proyecto_id' => $request->proyecto_id,
+
             ]);
 
             return response()->json([
@@ -170,6 +175,66 @@ class TareasController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error al eliminar la tarea',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+     /**
+     * Obtener tareas por proyecto
+     * GET /api/proyectos/{proyectoId}/tareas
+     */
+    public function getByProyecto($proyectoId): JsonResponse
+    {
+        try {
+            $query = Tarea::where('proyecto_id', $proyectoId);
+
+            $tareas = $query->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $tareas
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener las tareas del proyecto',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+        /**
+     * Obtener tareas por proyecto
+     * GET /api/proyectos/{proyectoId}/tareas
+     */
+   public function getByModuloProyecto($proyectoId): JsonResponse
+    {
+        try {
+            // Obter los módulos del proyecto
+            $modulos = ProyectoModulo::where('proyecto_id', $proyectoId)->get();
+
+            $result = [];
+
+            // Por cada módulo, obtén la tarea asociada
+            foreach ($modulos as $modulo) {
+                // Busca la tarea usando el id que está almacenado en el módulo
+                $tarea = Tarea::where('id', $modulo->tarea_id)->first();
+
+                if ($tarea) {
+                    $result[] = $tarea;
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener las tareas por módulo',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -230,7 +230,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('asignar-pagos', 'PagoController@assignPayment');
     $router->post('pagos-por-alumnos', 'PagoController@uploadPaymentByStudent');
     $router->post('pagos/{domain_id}/validar-pago', 'PagoController@validPayment');
-
+    $router->delete('pagos/{domain_id}/eliminar-voucher', 'PagoController@eliminarVoucherAlumno');
     $router->put('pagos/{pago_id}', 'PagoController@update');
     $router->delete('pagos/{pago_id}', 'PagoController@destroy');
     $router->post('pagos/{pago_id}/upload-voucher','PagoController@uploadVoucher');
@@ -482,6 +482,8 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('proyectos/{proyectoId}/modulos/{moduloId}/tareas', 'ProyectosController@anadirTarea'); // Añadir una tarea a un proyecto
     $router->put('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}', 'ProyectosController@actualizarTarea'); // Actualizar una tarea de un proyecto
     $router->delete('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}', 'ProyectosController@eliminarTarea'); // Eliminar una tarea de un proyecto
+    $router->put('proyectos/{proyectoId}/modulos/{moduloId}/tareas/{tareaId}/estado', 'ProyectosController@updateTareaEstado');
+
 
     //Candidatos
     $router->get('candidatos/domain/{domain_id}', 'CandidatoController@index');
@@ -530,5 +532,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('tareas/{id}', 'TareasController@show');
     $router->put('tareas/{id}', 'TareasController@update');
     $router->delete('tareas/{id}', 'TareasController@destroy');
+    $router->get('proyectos/{proyectoId}/tareas', 'TareasController@getByProyecto');
+    $router->get('tareas/{proyectoId}/modulos', 'TareasController@getByModuloProyecto');
 
 });
