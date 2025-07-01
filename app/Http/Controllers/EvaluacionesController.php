@@ -385,25 +385,26 @@ class EvaluacionesController extends Controller
     public function getPromedioPorAlumnoYGrupo($alumnoId, $grupoId)
     {
         try {
-            $promedios = DB::table('evaluaciones_alumno as ea')
+            $resultados = DB::table('evaluaciones_alumno as ea')
                 ->join('evaluaciones as e', 'ea.evaluacion_id', '=', 'e.id')
                 ->where('ea.alumno_id', $alumnoId)
                 ->where('e.grupo_de_evaluaciones_id', $grupoId)
                 ->select(
                     'ea.alumno_id',
-                    DB::raw('AVG(ea.nota) as promedio_por_alumno')
+                    'ea.nota',
+                    'e.porcentaje_asignado'
                 )
-                ->groupBy('ea.alumno_id')
-                ->first();
+                ->get();
 
             return response()->json([
                 'success' => true,
-                'promedio' => $promedios->promedio_por_alumno ?? null
+                'message' => 'Notas obtenidas correctamente log',
+                'data' => $resultados
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener el promedio de las notas del alumno: ' . $e->getMessage()
+                'message' => 'Error al obtener las notas y porcentajes: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -473,6 +474,39 @@ class EvaluacionesController extends Controller
             return response()->json(['message' => 'Archivos subidos correctamente.']);
         } else {
             return response()->json(['error' => 'Evaluación no encontrada.'], 404);
+        }
+    }
+
+    /**
+     * Obtiene las notas y porcentajes asignados de un alumno en un grupo específico
+     * 
+     * @param int $alumnoId ID del alumno
+     * @param int $grupoId ID del grupo de evaluaciones
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getNotasYPorcentajesPorAlumnoYGrupo($alumnoId, $grupoId)
+    {
+        try {
+            $resultados = DB::table('evaluaciones_alumno as ea')
+                ->join('evaluaciones as e', 'ea.evaluacion_id', '=', 'e.id')
+                ->where('ea.alumno_id', $alumnoId)
+                ->where('e.grupo_de_evaluaciones_id', $grupoId)
+                ->select(
+                    'ea.alumno_id',
+                    'ea.nota',
+                    'e.porcentaje_asignado'
+                )
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $resultados
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las notas y porcentajes: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
