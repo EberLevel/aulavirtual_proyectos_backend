@@ -19,6 +19,8 @@ class Curso extends Model
         'area_de_formacion_id',
         'syllabus',
         'tema',
+        'docente_id',
+        'descripcion_competencia',
         'estado_id',
         'domain_id',
         'docente_id'
@@ -45,7 +47,7 @@ class Curso extends Model
     {
         return $this->belongsToMany(Alumno::class, 'curso_alumno', 'curso_id', 'alumno_id');
     }
-    
+
     // Definir la relación con el modelo Carrera
     public function carrera()
     {

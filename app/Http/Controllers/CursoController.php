@@ -132,9 +132,6 @@ class CursoController extends Controller
     }
 
 
-
-
-
     public function store(Request $request)
     {
         $this->validate($request, [
@@ -149,10 +146,11 @@ class CursoController extends Controller
             'horasPracticas' => 'required|integer',
             'carreraId' => 'required|integer',
             'syllabus' => 'required|string',
-            'tema' => 'required|string',
-            'estadoId' => 'required|integer',
+            'tema' => 'nullable|string',
+            'estadoId' => 'nullable|integer',
             'domain_id' => 'required',
             'asignacionDocentesId' => 'nullable',
+            'descripcion_competencia'=> 'nullable|string|max:255',
         ]);
 
         $curso = Curso::create([
@@ -171,6 +169,8 @@ class CursoController extends Controller
             'estado_id' => $request->estadoId,
             'domain_id' => $request->domain_id,
             'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
+            'descripcion_competencia' => $request->descripcion_competencia,
+            'created_at' => Carbon::now(),
         ]);
 
         return response()->json($curso, 201);
@@ -188,13 +188,13 @@ class CursoController extends Controller
                 '*.areaFormacionId' => 'required|string',
                 '*.moduloFormativoId' => 'required|string',
                 '*.cantidadCreditos' => 'required|integer',
-                '*.porcentajeCreditos' => 'required|integer',
                 '*.cantidadHoras' => 'required|integer',
                 '*.horasPracticas' => 'required|integer',
                 '*.carreraId' => 'required|string',
                 '*.estadoId' => 'required|string',
                 '*.domain_id' => 'required',
                 '*.asignacionDocentesId' => 'nullable',
+                '*.descripcionCompetencia'=> 'nullable',
             ]);
 
             // Validar que el request sea un array
@@ -270,7 +270,6 @@ class CursoController extends Controller
                     'area_de_formacion_id' => $cursoData['areaFormacionId'],
                     'modulo_formativo_id' => $cursoData['moduloFormativoId'],
                     'cantidad_de_creditos' => $cursoData['cantidadCreditos'],
-                    'porcentaje_de_creditos' => $cursoData['porcentajeCreditos'],
                     'cantidad_de_horas' => $cursoData['cantidadHoras'],
                     'horas_practicas' => $cursoData['horasPracticas'],
                     'carrera_id' => $cursoData['carreraId'],
@@ -279,6 +278,7 @@ class CursoController extends Controller
                     'estado_id' => $cursoData['estadoId'],
                     'domain_id' => $cursoData['domain_id'],
                     'docente_id' => is_array($cursoData['asignacionDocentesId']) ? null : $cursoData['asignacionDocentesId'],
+                    'descripcion_competencia' => $cursoData['descripcionCompetencia'] ?? null,
                     'updated_at' => Carbon::now()
                 ];
 
@@ -386,11 +386,12 @@ class CursoController extends Controller
             'cantidadHoras' => 'required|integer',
             'horasPracticas' => 'required|integer',
             'carreraId' => 'required|integer',
-            'syllabus' => 'required|string',
-            'tema' => 'required|string',
+            'syllabus' => 'nullable|string',
+            'tema' => 'nullable|string',
             'estadoId' => 'required|integer',
             'domain_id' => 'required',
             'asignacionDocentesId' => 'nullable',
+            'descripcion_competencia' => 'nullable|string|max:255',
         ]);
 
         $curso = Curso::findOrFail($id);
@@ -410,6 +411,7 @@ class CursoController extends Controller
             'estado_id' => $request->estadoId,
             'domain_id' => $request->domain_id,
             'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
+            'descripcion_competencia' => $request->descripcion_competencia,
         ]);
 
         return response()->json($curso, 200);
