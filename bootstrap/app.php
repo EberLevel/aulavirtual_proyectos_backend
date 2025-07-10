@@ -67,6 +67,7 @@ $app->singleton(
 
 $app->configure('app');
 $app->configure('database');
+$app->configure('mail');
 
 /*
 |--------------------------------------------------------------------------
@@ -110,6 +111,7 @@ $app->middleware([
 */
 $app->configure('filesystems');
 $app->register(Illuminate\Filesystem\FilesystemServiceProvider::class);
+$app->register(Illuminate\Mail\MailServiceProvider::class);
 
  $app->register(App\Providers\AppServiceProvider::class);
  $app->register(App\Providers\AuthServiceProvider::class);

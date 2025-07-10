@@ -14,7 +14,13 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\StorageLinkCommand::class,
-
+        \App\Console\Commands\TestEmailCommand::class,
+        \App\Console\Commands\TestPasswordChangeCommand::class,
+        \App\Console\Commands\TestLoginCommand::class,
+        \App\Console\Commands\ResetPasswordStatusCommand::class,
+        \App\Console\Commands\ShowUserInfoCommand::class,
+        \App\Console\Commands\GeneratePasswordResetUrlCommand::class,
+        \App\Console\Commands\TestPostulanteEmailCommand::class,
     ];
 
     /**

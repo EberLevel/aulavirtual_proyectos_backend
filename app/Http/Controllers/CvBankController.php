@@ -108,7 +108,8 @@ class CvBankController extends Controller
     }
 
     public function store(Request $request)
-    {
+    
+    {    
         try {
             // Log all incoming data for debugging
             Log::info('Raw POST data:', ['input' => $request->all(), 'files' => $request->files->all()]);
@@ -193,6 +194,8 @@ class CvBankController extends Controller
                 'rol_id' => 21,
                 'type' => 'user',
                 'status' => 'active',
+                'password_changed' => false,
+                'password_changed_at' => null,
             ]);
 
             $user->save();
@@ -240,10 +243,45 @@ class CvBankController extends Controller
             $cvBank->image_url = $cvBank->image ? Storage::url($cvBank->image) : null;
             $cvBank->cv_url = $cvBank->cv_path ? Storage::url($cvBank->cv_path) : null;
 
+            // Enviar correo de bienvenida si se proporcionó email
+            if ($request->filled('email')) {
+                $this->sendWelcomeEmail($cvBank->id, $request->input('email'));
+            }
+
             return response()->json(['cvBank' => $cvBank], 201);
         } catch (\Exception $e) {
             Log::error('Error creating postulante: ' . $e->getMessage());
             return response()->json(['message' => 'Error creating postulante: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Enviar correo de bienvenida al postulante
+     */
+    private function sendWelcomeEmail($cvBankId, $email)
+    {
+        try {
+            // Obtener datos del postulante
+            $postulante = CvBank::find($cvBankId);
+            
+            if (!$postulante) {
+                Log::error('Postulante no encontrado para enviar correo: ' . $cvBankId);
+                return;
+            }
+
+            // Generar URL de reset de contraseña
+            $passwordResetController = new \App\Http\Controllers\FrontendPasswordController();
+            $resetUrl = $passwordResetController->generateResetUrl($email);
+
+            if (!$resetUrl) {
+                throw new \Exception('No se pudo generar la URL de reset');
+            }
+
+            // Enviar correo
+            $emailService = new \App\Services\EmailService();
+            $emailService->sendWelcomeEmailPostulante($postulante, $resetUrl);
+        } catch (\Exception $e) {
+            Log::error('Error enviando correo de bienvenida a postulante: ' . $e->getMessage());
         }
     }
 

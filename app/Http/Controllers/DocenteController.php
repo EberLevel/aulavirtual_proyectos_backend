@@ -168,9 +168,24 @@ class DocenteController extends Controller
                 'password' => Hash::make($request->contraseña),
                 'rol_id' => $docenteRol->id,
                 'domain_id' => $request->domain_id,
-                'docente_id' => $docenteId
+                'docente_id' => $docenteId,
+                'password_changed' => false,
+                'password_changed_at' => null,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now()
             ];
             DB::table('users')->insert($userData);
+
+            // Enviar correo de bienvenida con enlace de cambio de contraseña
+            try {
+                $docente = (object) array_merge($docenteData, ['email' => $request->email, 'codigo' => $request->codigo, 'profesion' => $request->profesion]);
+                $passwordResetController = new \App\Http\Controllers\FrontendPasswordController();
+                $resetUrl = $passwordResetController->generateResetUrl($request->email);
+                $emailService = new \App\Services\EmailService();
+                $emailService->sendWelcomeEmailDocente($docente, $resetUrl);
+            } catch (\Exception $e) {
+                \Log::error('Error al enviar correo de bienvenida a docente: ' . $e->getMessage());
+            }
 
             DB::commit();
             return response()->json(['Exito' => true, 'Mensaje' => 'Registro exitoso'], 201);

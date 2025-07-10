@@ -198,6 +198,10 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('roles/{domain_id}/{rol_id}', 'RolController@index');
     $router->post('rol/guardar', 'RolController@store');
     $router->get('rol/{id}', 'RolController@show');
+
+    // Rutas para cambio de contraseña (públicas, sin autenticación)
+    $router->post('password/verify-token', 'FrontendPasswordController@verifyToken');
+    $router->post('password/reset', 'FrontendPasswordController@resetPassword');
     $router->put('rol/guardar/{id}', 'RolController@update');
     $router->delete('rol/eliminar/{id}', 'RolController@destroy');
     $router->get('roles-dropdown/{domain_id}/{rol_id}', 'RolController@getRolesDropDown');

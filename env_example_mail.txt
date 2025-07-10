@@ -1,0 +1,12 @@
+# Configuración de correo SMTP - Zoho
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.zoho.com
+MAIL_PORT=465
+MAIL_USERNAME=info@dentalteammedellin.com
+MAIL_PASSWORD=aqwEh3z@
+MAIL_ENCRYPTION=ssl
+MAIL_FROM_ADDRESS=info@dentalteammedellin.com
+MAIL_FROM_NAME="Plataforma Educativa"
+
+# URL de tu frontend para el reset de contraseña
+FRONTEND_URL=https://tu-frontend.com 

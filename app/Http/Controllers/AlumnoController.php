@@ -114,6 +114,8 @@ class AlumnoController extends Controller
                 'dni' => $request->input('numeroDocumento'),
                 'domain_id' => $request->input('domain_id'),
                 'password' => Hash::make($request->input('contraseña')),
+                'password_changed' => false,
+                'password_changed_at' => null,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
                 'rol_id' => 12
@@ -139,11 +141,53 @@ class AlumnoController extends Controller
 
             DB::commit();
 
+            // Enviar correo de bienvenida al alumno
+            try {
+                $this->sendWelcomeEmail($alumnoId, $request->input('email'));
+            } catch (\Exception $e) {
+                // Log del error pero no fallar la creación del alumno
+                \Log::error('Error al enviar correo de bienvenida: ' . $e->getMessage());
+            }
+
             return response()->json(['alumno_id' => $alumnoId, 'message' => 'Alumno y usuario creados correctamente, y asignado a los cursos de la carrera.'], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Enviar correo de bienvenida al alumno
+     */
+    private function sendWelcomeEmail($alumnoId, $email)
+    {
+        // Obtener datos completos del alumno
+        $alumno = DB::table('alumnos')
+            ->leftJoin('ciclos', 'ciclos.id', '=', 'alumnos.ciclo_id')
+            ->leftJoin('carreras', 'carreras.id', '=', 'alumnos.carrera_id')
+            ->select(
+                'alumnos.*',
+                'ciclos.nombre as ciclo_nombre',
+                'carreras.nombres as carrera_nombre'
+            )
+            ->where('alumnos.id', $alumnoId)
+            ->first();
+
+        if (!$alumno) {
+            throw new \Exception('Alumno no encontrado');
+        }
+
+        // Generar URL de reset de contraseña
+        $passwordResetController = new \App\Http\Controllers\FrontendPasswordController();
+        $resetUrl = $passwordResetController->generateResetUrl($email);
+
+        if (!$resetUrl) {
+            throw new \Exception('No se pudo generar la URL de reset');
+        }
+
+        // Enviar correo
+        $emailService = new \App\Services\EmailService();
+        $emailService->sendWelcomeEmail($alumno, $resetUrl);
     }
  
 
@@ -313,6 +357,8 @@ class AlumnoController extends Controller
                         'dni' => $alumnoData['numeroDocumento'] ?? null,
                         'domain_id' => $alumnoData['domain_id'],
                         'password' => Hash::make($alumnoData['contraseña']),
+                        'password_changed' => false,
+                        'password_changed_at' => null,
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now(),
                         'rol_id' => 12

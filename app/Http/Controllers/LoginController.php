@@ -37,6 +37,17 @@ class LoginController extends Controller
     
         // Verifica la contraseña
         if (Hash::check($request->password, $user->password)) {
+            // Verifica si el usuario es un alumno (rol_id = 12), docente (rol_id = 17) o postulante (rol_id = 21) y si ha cambiado su contraseña inicial
+            if ((($user->rol_id == 12) || ($user->rol_id == 17) || ($user->rol_id == 21)) && !$user->password_changed) {
+                return response()->json([
+                    'mensaje' => 'Debe cambiar su contraseña inicial antes de continuar',
+                    'status' => 403,
+                    'require_password_change' => true,
+                    'user_id' => $user->id,
+                    'email' => $user->email
+                ], 200);
+            }
+            
             // Genera un token de API
             $apiToken = Str::random(150);
     
