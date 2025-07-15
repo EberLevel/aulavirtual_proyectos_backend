@@ -58,7 +58,7 @@ class AlumnoController extends Controller
             $this->validate($request, [
                 'codigo' => 'required|string|max:255',
                 'nombres' => 'required|string|max:255',
-                'apellidos' => 'required|string|max:255',
+                'apellidos' => 'string|max:255',
                 'cicloId' => 'required|integer',
                 'carreraId' => 'required|integer',
                 'promocion_id' => 'required|integer',
@@ -193,14 +193,14 @@ class AlumnoController extends Controller
 
 
     public function storeMasivos(Request $request)
-    {
+    { 
         DB::beginTransaction();
         try {
             // Validar que se reciba un array de alumnos directamente
             $this->validate($request, [
                 '*.codigo' => 'required|string|max:255',
                 '*.nombres' => 'required|string|max:255',
-                '*.apellidos' => 'required|string|max:255',
+                '*.apellidos' => 'string|max:255',
                 '*.cicloId' => 'required|string',
                 '*.carreraId' => 'required|string',
                 '*.promocion_id' => 'required|string',
@@ -297,7 +297,7 @@ class AlumnoController extends Controller
                 $alumnoDataForDB = [
                     "codigo" => $alumnoData['codigo'],
                     "nombres" => $alumnoData['nombres'],
-                    "apellidos" => $alumnoData['apellidos'],
+                    "apellidos" => $alumnoData['apellidos'] ?? ' ',
                     "celular" => $alumnoData['celular'] ?? null,
                     "email" => $alumnoData['email'],
                     "carrera_id" => $alumnoData['carreraId'],
@@ -330,7 +330,7 @@ class AlumnoController extends Controller
                         ->where('alumno_id', $alumnoId)
                         ->update([
                             'name' => $alumnoData['nombres'],
-                            'lastname' => $alumnoData['apellidos'],
+                            'lastname' => $alumnoData['apellidos'] ?? ' ',
                             'email' => $alumnoData['email'],
                             'dni' => $alumnoData['numeroDocumento'] ?? null,
                             'password' => Hash::make($alumnoData['contraseña']),
@@ -352,7 +352,7 @@ class AlumnoController extends Controller
                     DB::table('users')->insert([
                         'alumno_id' => $alumnoId,
                         'name' => $alumnoData['nombres'],
-                        'lastname' => $alumnoData['apellidos'],
+                        'lastname' => $alumnoData['apellidos'] ?? ' ',
                         'email' => $alumnoData['email'],
                         'dni' => $alumnoData['numeroDocumento'] ?? null,
                         'domain_id' => $alumnoData['domain_id'],
@@ -387,7 +387,7 @@ class AlumnoController extends Controller
                     'alumno_id' => $alumnoId,
                     'email' => $alumnoData['email'],
                     'nombres' => $alumnoData['nombres'],
-                    'apellidos' => $alumnoData['apellidos']
+                    'apellidos' => $alumnoData['apellidos'] ?? ' '
                 ];
 
                 if ($esActualizacion) {

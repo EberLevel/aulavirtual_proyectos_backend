@@ -31,13 +31,26 @@ public function store(Request $request)
         ];
 
         // Validar si se envió un logo para actualizar
-        if ($request->hasFile('logo')) {
+     /*   if ($request->hasFile('logo')) {
             $isValid = $this->checkIsValidImage($request->logo);
             if ($isValid) {
                 // Solo sube el archivo si es válido
                 $toInsert['logo_url'] = $this->uploadFile($request->logo, $folderName);
             }
+        }*/
+
+        if ($request->hasFile('logo')) {
+            $isValid = $this->checkIsValidImage($request->logo);
+            if ($isValid) {
+                $file = $request->file('logo');
+                $imageData = file_get_contents($file->getRealPath());
+                $mimeType = $file->getMimeType(); // e.g. image/png, image/jpeg
+                $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                $toInsert['logo_url'] = $base64;
+            }
+            
         }
+        
 
         // Actualizar los datos en la tabla
         DB::table('companies')

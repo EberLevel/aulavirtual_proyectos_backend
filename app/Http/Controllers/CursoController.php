@@ -139,13 +139,13 @@ class CursoController extends Controller
             'nombreCurso' => 'required|string|max:255',
             'cicloId' => 'required|integer',
             'areaFormacionId' => 'required|integer',
-            'moduloFormativoId' => 'required|integer',
-            'cantidadCreditos' => 'required|integer',
-            'porcentajeCreditos' => 'required|integer',
+            'moduloFormativoId' => 'required|string',
+            'cantidadCreditos' => 'required|numeric',
+            'porcentajeCreditos' => 'required|numeric', 
             'cantidadHoras' => 'required|integer',
             'horasPracticas' => 'required|integer',
             'carreraId' => 'required|integer',
-            'syllabus' => 'required|string',
+            'syllabus' => 'string', 
             'tema' => 'nullable|string',
             'estadoId' => 'nullable|integer',
             'domain_id' => 'required',
@@ -187,7 +187,7 @@ class CursoController extends Controller
                 '*.cicloId' => 'required|string',
                 '*.areaFormacionId' => 'required|string',
                 '*.moduloFormativoId' => 'required|string',
-                '*.cantidadCreditos' => 'required|integer',
+                '*.cantidadCreditos' => 'required|numeric',
                 '*.cantidadHoras' => 'required|integer',
                 '*.horasPracticas' => 'required|integer',
                 '*.carreraId' => 'required|string',
@@ -231,20 +231,20 @@ class CursoController extends Controller
                 $cursoData['carreraId'] = $carreraExist->id;
 
                 // Validar que el área de formación existe
-                $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
+           /*     $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
                     ->where('domain_id', $cursoData['domain_id'])->first();
                 if (!$areaExist) {
                     throw new \Exception("Curso en posición {$index}: El área de formación con ID {$cursoData['areaFormacionId']} no existe");
                 }
-                $cursoData['areaFormacionId'] = $areaExist->id;
+                $cursoData['areaFormacionId'] = $areaExist->id;*/
 
                 // Validar que el módulo formativo existe
-                $moduloExist = DB::table('modulos_formativos')->where('nombre', $cursoData['moduloFormativoId'])
+              /*  $moduloExist = DB::table('modulos_formativos')->where('nombre', $cursoData['moduloFormativoId'])
                     ->where('domain_id', $cursoData['domain_id'])->first();
                 if (!$moduloExist) {
                     throw new \Exception("Curso en posición {$index}: El módulo formativo con ID {$cursoData['moduloFormativoId']} no existe");
                 }
-                $cursoData['moduloFormativoId'] = $moduloExist->id;
+                $cursoData['moduloFormativoId'] = $moduloExist->id;*/
 
                 // Validar que el estado existe
                 $estadoExist = DB::table('plan_de_estudios')->where('nombre', $cursoData['estadoId'])
@@ -381,7 +381,7 @@ class CursoController extends Controller
             'cicloId' => 'required|integer',
             'areaFormacionId' => 'required|integer',
             'moduloFormativoId' => 'required|integer',
-            'cantidadCreditos' => 'required|integer',
+            'cantidadCreditos' => 'required|numeric',
             'porcentajeCreditos' => 'required',
             'cantidadHoras' => 'required|integer',
             'horasPracticas' => 'required|integer',
