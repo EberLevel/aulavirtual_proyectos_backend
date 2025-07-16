@@ -194,6 +194,7 @@ class AlumnoController extends Controller
 
     public function storeMasivos(Request $request)
     { 
+        
         DB::beginTransaction();
         try {
             // Validar que se reciba un array de alumnos directamente
@@ -206,7 +207,7 @@ class AlumnoController extends Controller
                 '*.promocion_id' => 'required|string',
                 '*.domain_id' => 'required|integer',
                 '*.estadoId' => 'required|string',
-                '*.email' => 'required|email|max:255',
+                '*.email' => 'max:400',
                 '*.contraseña' => 'required|string|min:6'
             ]);
 
@@ -418,7 +419,7 @@ class AlumnoController extends Controller
             // ]);
 
             return response()->json([
-                'message' => 'Error al procesar los alumnos: ' . $e->getMessage(),
+                'message' => 'Error al procesar los alumnos2: ' . $e->getMessage(),
                 'details' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }

@@ -95,7 +95,7 @@ class CursoAlumnoController extends Controller
         //     'estado_curso_alumno.nombre as estadoCursoAlumno'
         // )    ->get();
 
-        $cursos = DB::table('cursos')
+       /* $cursos = DB::table('cursos')
             ->join('alumnos', 'alumnos.estado_id', '=', 'cursos.estado_id')
             ->join('curso_alumno', 'curso_alumno.curso_id', '=', 'cursos.id')
             ->leftJoin('estado_curso_alumno', 'curso_alumno.estado_curso_id', '=', 'estado_curso_alumno.id')
@@ -120,7 +120,31 @@ class CursoAlumnoController extends Controller
                 'plan_de_estudios.nombre as plan_estudio_nombre',
                 DB::raw("IF(estado_curso_alumno.nombre IS NULL, 'PENDIENTE', estado_curso_alumno.nombre) as estadoCursoAlumno")
             )
-            ->get();
+            ->get();*/
+
+            $cursos = Curso::leftJoin('curso_alumno', 'curso_alumno.curso_id', '=', 'cursos.id')
+                ->leftJoin('ciclos', 'ciclos.id', '=', 'cursos.ciclo_id')
+                ->leftJoin('area_de_formacion', 'area_de_formacion.id', '=', 'cursos.area_de_formacion_id')
+                ->leftJoin('modulos_formativos', 'modulos_formativos.id', '=', 'cursos.modulo_formativo_id')
+                ->leftJoin('estados', 'estados.id', '=', 'cursos.estado_id')
+                ->leftJoin('carreras', 'carreras.id', '=', 'cursos.carrera_id')
+                ->leftJoin('alumnos', 'alumnos.id', '=', 'curso_alumno.alumno_id')
+                ->leftJoin('estado_curso_alumno', 'curso_alumno.estado_curso_id', '=', 'estado_curso_alumno.id') // Nuevo join
+                ->where('curso_alumno.alumno_id', $alumnoId)
+                ->where('alumnos.estadoAlumno', '!=', 'RETIRADO')
+                ->select(
+                    'cursos.*',
+                    'ciclos.nombre as ciclo_nombre',
+                    'area_de_formacion.nombre as area_de_formacion_nombre',
+                    'modulos_formativos.nombre as modulo_formativo_nombre',
+                    'carreras.nombres as carrera_nombre',
+                    'estados.nombre as estado_nombre',
+                    'alumnos.id as alumno_id',
+                    'curso_alumno.estado_id as estado_id',
+                    'estado_curso_alumno.color',
+                    DB::raw("IF(estado_curso_alumno.nombre IS NULL, 'PENDIENTE', estado_curso_alumno.nombre) as estadoCursoAlumno")
+                )
+                ->get(); 
 
 
 
