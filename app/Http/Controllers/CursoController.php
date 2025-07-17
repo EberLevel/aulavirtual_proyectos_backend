@@ -380,7 +380,7 @@ class CursoController extends Controller
             'nombreCurso' => 'required|string|max:255',
             'cicloId' => 'required|integer',
             'areaFormacionId' => 'required|integer',
-            'moduloFormativoId' => 'required|integer',
+            'moduloFormativoId' => 'required|string',
             'cantidadCreditos' => 'required|numeric',
             'porcentajeCreditos' => 'required',
             'cantidadHoras' => 'required|integer',
