@@ -317,7 +317,7 @@ class EmailService
         </body>
         </html>';
         return $html;
-    }
+    } 
 
     /**
      * Enviar correo de recuperación de contraseña
