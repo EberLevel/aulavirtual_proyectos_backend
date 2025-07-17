@@ -130,6 +130,7 @@ class CursoAlumnoController extends Controller
                 ->leftJoin('carreras', 'carreras.id', '=', 'cursos.carrera_id')
                 ->leftJoin('alumnos', 'alumnos.id', '=', 'curso_alumno.alumno_id')
                 ->leftJoin('estado_curso_alumno', 'curso_alumno.estado_curso_id', '=', 'estado_curso_alumno.id') // Nuevo join
+                ->join('promociones as p', 'alumnos.promocion_id', '=', 'p.id') 
                 ->where('curso_alumno.alumno_id', $alumnoId)
                 ->where('alumnos.estadoAlumno', '!=', 'RETIRADO')
                 ->select(
@@ -142,6 +143,7 @@ class CursoAlumnoController extends Controller
                     'alumnos.id as alumno_id',
                     'curso_alumno.estado_id as estado_id',
                     'estado_curso_alumno.color',
+                    'p.nombre_promocion as nombre_promocion' ,
                     DB::raw("IF(estado_curso_alumno.nombre IS NULL, 'PENDIENTE', estado_curso_alumno.nombre) as estadoCursoAlumno")
                 )
                 ->get(); 

@@ -318,4 +318,107 @@ class EmailService
         </html>';
         return $html;
     }
+
+    /**
+     * Enviar correo de recuperación de contraseña
+     */
+    public function sendPasswordResetEmail($user, $resetUrl)
+    {
+        try {
+            $to = $user->email;
+            $subject = 'Recuperación de Contraseña - Plataforma Educativa';
+            
+            $message = $this->buildPasswordResetEmailContent($user, $resetUrl);
+            
+            Mail::html($message, function($message) use ($to, $subject) {
+                $message->to($to)
+                        ->subject($subject)
+                        ->from(env('MAIL_FROM_ADDRESS', 'noreply@example.com'), 
+                               env('MAIL_FROM_NAME', 'Plataforma Educativa'));
+            });
+            
+            Log::info('Correo de recuperación de contraseña enviado exitosamente a: ' . $to);
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Error al enviar correo de recuperación: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Construir el contenido del correo de recuperación de contraseña
+     */
+    private function buildPasswordResetEmailContent($user, $resetUrl)
+    {
+        $userName = $user->name . ' ' . $user->lastname;
+        
+        $html = '
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Recuperación de Contraseña</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                .container { background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #dc3545; }
+                .header h1 { color: #dc3545; margin: 0; font-size: 28px; }
+                .content { margin-bottom: 30px; }
+                .welcome-text { font-size: 18px; margin-bottom: 20px; color: #555; }
+                .info-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545; }
+                .info-box h3 { margin-top: 0; color: #dc3545; }
+                .btn { display: inline-block; padding: 12px 24px; background-color: #dc3545; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center; }
+                .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔐 Recuperación de Contraseña</h1>
+                </div>
+                
+                <div class="content">
+                    <div class="welcome-text">
+                        <p>¡Hola <strong>' . $userName . '</strong>!</p>
+                        <p>Has solicitado recuperar tu contraseña en la Plataforma Educativa. Haz clic en el botón de abajo para crear una nueva contraseña.</p>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h3>📧 Información de la solicitud:</h3>
+                        <p><strong>Email:</strong> ' . $user->email . '</p>
+                        <p><strong>Fecha de solicitud:</strong> ' . date('d/m/Y H:i:s') . '</p>
+                        <p><strong>IP de solicitud:</strong> ' . ($_SERVER['REMOTE_ADDR'] ?? 'No disponible') . '</p>
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>⚠️ Importante:</strong> Este enlace es válido por 24 horas. Si no solicitaste este cambio, puedes ignorar este correo.
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="' . $resetUrl . '" class="btn">
+                            🔑 Cambiar Contraseña
+                        </a>
+                    </div>
+                    
+                    <p style="text-align: center; margin-top: 20px;">
+                        <strong>¿No puedes hacer clic en el botón?</strong><br>
+                        Copia y pega este enlace en tu navegador:<br>
+                        <a href="' . $resetUrl . '" style="color: #dc3545; word-break: break-all;">' . $resetUrl . '</a>
+                    </p>
+                </div>
+                
+                <div class="footer">
+                    <p>Este es un correo automático, por favor no respondas a este mensaje.</p>
+                    <p>Si tienes alguna pregunta, contacta con el soporte técnico.</p>
+                    <p>&copy; ' . date('Y') . ' Plataforma Educativa. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>';
+        
+        return $html;
+    }
 } 

@@ -7,9 +7,65 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Services\EmailService;
 
 class FrontendPasswordController extends Controller
 {
+    /**
+     * Solicitar reset de contraseña
+     */
+    public function requestReset(Request $request)
+    {
+        $this->validate($request, [
+            'email' => 'required|email'
+        ]);
+
+        try {
+            // Verificar si el usuario existe
+            $user = DB::table('users')->where('email', $request->email)->first();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No existe una cuenta con este correo electrónico'
+                ], 404);
+            }
+
+            // Generar URL de reset
+            $resetUrl = $this->generateResetUrl($request->email);
+            
+            if (!$resetUrl) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al generar el enlace de recuperación'
+                ], 500);
+            }
+
+            // Enviar correo de recuperación
+            $emailService = new EmailService();
+            $emailSent = $emailService->sendPasswordResetEmail($user, $resetUrl);
+
+            if ($emailSent) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Se ha enviado un correo con las instrucciones para recuperar tu contraseña'
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al enviar el correo de recuperación'
+                ], 500);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Verificar token desde el frontend
      */

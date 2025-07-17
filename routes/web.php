@@ -200,6 +200,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('rol/{id}', 'RolController@show');
 
     // Rutas para cambio de contraseña (públicas, sin autenticación)
+    $router->post('password/request-reset', 'FrontendPasswordController@requestReset');
     $router->post('password/verify-token', 'FrontendPasswordController@verifyToken');
     $router->post('password/reset', 'FrontendPasswordController@resetPassword');
     $router->put('rol/guardar/{id}', 'RolController@update');
