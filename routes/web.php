@@ -292,6 +292,11 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->post('evaluacion/{id}', 'EvaluacionesController@updateEvaluacionById');
     $router->get('evaluacionesBygrupo/grupo/{grupoId}/{alumnoId}', 'EvaluacionesController@getEvaluacionesPorGrupo');
 
+    // En routes/web.php o api.php
+    $router->get('evaluaciones/verificar-estado', 'EvaluacionesController@verificarEstadoEvaluaciones');
+    $router->post('evaluaciones/reparar-todas', 'EvaluacionesController@repararTodasLasEvaluaciones');
+    $router->post('evaluaciones/{id}/reparar', 'EvaluacionesController@repararEvaluacionEspecifica');
+
 
     //calendarios routes
     $router->post('calendario/alumno', 'CalendarioController@getAlumnoCalendario');

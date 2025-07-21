@@ -118,6 +118,7 @@ class EvaluacionesController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * Modificado para poblar automáticamente evaluaciones_alumno
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
@@ -126,7 +127,7 @@ class EvaluacionesController extends Controller
     {
         try {
             // Debug: Mostrar todos los datos recibidos
-            Log::info('Datos recibidos en store:', $request->all());
+            Log::info('🚀 Datos recibidos en store:', $request->all());
 
             // Crear el validador manualmente para Lumen
             $validator = Validator::make($request->all(), [
@@ -147,8 +148,7 @@ class EvaluacionesController extends Controller
 
             // Verificar si la validación falló
             if ($validator->fails()) {
-                Log::error('Error de validación:', $validator->errors()->toArray());
-
+                Log::error('❌ Error de validación:', $validator->errors()->toArray());
                 return response()->json([
                     'success' => false,
                     'message' => 'Error de validación',
@@ -166,57 +166,33 @@ class EvaluacionesController extends Controller
             // Remover 'recursos' del array de datos validados ya que no es un campo de la tabla
             $evaluacionData = collect($validatedData)->except('recursos')->toArray();
 
+            // Iniciar transacción para asegurar consistencia
+            DB::beginTransaction();
+
             // Crear la evaluación
             $evaluacion = Evaluaciones::create($evaluacionData);
+            Log::info("✅ Evaluación creada con ID: {$evaluacion->id}");
 
             $fileUrls = [];
 
             // Procesar archivos si existen
             if ($request->hasFile('recursos')) {
                 $files = $request->file('recursos');
-
-                // Debug: verificar el tipo de datos que llega
-                Log::info('Tipo de archivos recibidos:', [
-                    'is_array' => is_array($files),
-                    'type' => gettype($files),
-                    'class' => is_object($files) ? get_class($files) : null,
-                    'count' => is_array($files) ? count($files) : 1
-                ]);
+                Log::info('📁 Procesando archivos:', ['count' => is_array($files) ? count($files) : 1]);
 
                 // Normalizar a array si no lo es
                 if (!is_array($files)) {
                     $files = [$files];
                 }
 
-                Log::info('Procesando archivos:', ['count' => count($files)]);
-
                 foreach ($files as $index => $file) {
-                    // Verificar que el archivo sea válido y no sea null
                     if ($file && $file->isValid()) {
-                        // Generar nombre único para el archivo
                         $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
-
-                        // Guardar el archivo en el disco público
                         $path = $file->storeAs('uploads/evaluaciones', $fileName, 'public');
-
-                        // Generar URL completa
                         $fileUrl = Storage::url($path);
                         $fileUrls[] = $fileUrl;
 
-                        Log::info('Archivo guardado:', [
-                            'index' => $index,
-                            'original_name' => $file->getClientOriginalName(),
-                            'saved_name' => $fileName,
-                            'path' => $path,
-                            'url' => $fileUrl
-                        ]);
-                    } else {
-                        Log::error('Archivo inválido o nulo:', [
-                            'index' => $index,
-                            'file_exists' => $file !== null,
-                            'name' => $file ? $file->getClientOriginalName() : 'null',
-                            'error' => $file ? $file->getErrorMessage() : 'file is null'
-                        ]);
+                        Log::info("📄 Archivo guardado: {$fileName}");
                     }
                 }
 
@@ -224,28 +200,45 @@ class EvaluacionesController extends Controller
                 if (!empty($fileUrls)) {
                     $evaluacion->contenido = json_encode($fileUrls);
                     $evaluacion->save();
-
-                    Log::info('URLs de archivos guardadas:', $fileUrls);
+                    Log::info('📁 URLs de archivos guardadas:', $fileUrls);
                 }
-            } else {
-                Log::info('No se enviaron archivos en la petición');
             }
+
+            // 🎯 NUEVO: Poblar automáticamente evaluaciones_alumno
+            $alumnosCreados = $this->poblarEvaluacionesAlumno($evaluacion->id, $evaluacion->grupo_de_evaluaciones_id);
+
+            if ($alumnosCreados === false) {
+                // Si hay error al poblar, hacer rollback
+                DB::rollBack();
+                Log::error("❌ Error al poblar evaluaciones_alumno para evaluación {$evaluacion->id}");
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear registros de alumnos para la evaluación'
+                ], 500);
+            }
+
+            // Confirmar transacción
+            DB::commit();
 
             // Recargar el modelo para obtener los datos actualizados
             $evaluacion->refresh();
 
+            Log::info("🎉 Evaluación creada exitosamente con {$alumnosCreados} alumnos");
+
             return response()->json([
                 'success' => true,
-                'message' => 'evaluación creada exitosamente',
+                'message' => 'Evaluación creada exitosamente',
                 'data' => [
                     'evaluacion' => $evaluacion,
                     'fileUrls' => $fileUrls,
-                    'totalFiles' => count($fileUrls)
+                    'totalFiles' => count($fileUrls),
+                    'alumnosCreados' => $alumnosCreados
                 ]
             ], 201);
-
         } catch (\Exception $e) {
-            Log::error('Error al crear evaluación:', [
+            DB::rollBack();
+            Log::error('❌ Error al crear evaluación:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -258,6 +251,68 @@ class EvaluacionesController extends Controller
         }
     }
 
+    /**
+     * Poblar automáticamente la tabla evaluaciones_alumno
+     * al crear una nueva evaluación
+     */
+    private function poblarEvaluacionesAlumno($evaluacionId, $grupoDeEvaluacionesId)
+    {
+        try {
+            Log::info("🔧 Poblando evaluaciones_alumno para evaluación {$evaluacionId}");
+
+            // Obtener el curso_id del grupo de evaluaciones
+            $grupo = DB::table('grupo_de_evaluaciones')
+                ->where('id', $grupoDeEvaluacionesId)
+                ->first();
+
+            if (!$grupo) {
+                Log::error("❌ No se encontró grupo de evaluaciones con ID: {$grupoDeEvaluacionesId}");
+                return false;
+            }
+
+            Log::info("📚 Grupo encontrado - Curso ID: {$grupo->curso_id}");
+
+            // Obtener todos los alumnos activos del curso (estado_id = 2 = EN PROCESO)
+            $alumnos = DB::table('curso_alumno')
+                ->where('curso_id', $grupo->curso_id)
+                ->where('estado_id', 2) // Solo alumnos EN PROCESO
+                ->pluck('alumno_id');
+
+            if ($alumnos->isEmpty()) {
+                Log::warning("⚠️ No se encontraron alumnos activos en el curso {$grupo->curso_id}");
+                return 0; // No es error, simplemente no hay alumnos
+            }
+
+            Log::info("👥 Alumnos encontrados: {$alumnos->count()}");
+
+            // Preparar registros para inserción masiva
+            $registros = [];
+            $timestamp = Carbon::now();
+
+            foreach ($alumnos as $alumnoId) {
+                $registros[] = [
+                    'evaluacion_id' => $evaluacionId,
+                    'alumno_id' => $alumnoId,
+                    'nota' => 0.00,
+                    'asistencia' => 0,
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp
+                ];
+            }
+
+            // Inserción masiva para mejor rendimiento
+            DB::table('evaluaciones_alumno')->insert($registros);
+
+            Log::info("✅ Creados {$alumnos->count()} registros en evaluaciones_alumno");
+
+            return $alumnos->count();
+        } catch (\Exception $e) {
+            Log::error("❌ Error al poblar evaluaciones_alumno: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    
     /**
      * Método auxiliar para manejar la subida de archivos
      */
@@ -291,7 +346,6 @@ class EvaluacionesController extends Controller
             'headers' => $request->headers->all(),
             'content_type' => $request->header('Content-Type')
         ]);
-
     }
     /**
      * Display the specified resource.
