@@ -6,63 +6,69 @@ use App\Models\Evaluaciones;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 
 class EvaluacionesByModalidadController extends Controller
 {
-    /**
-     * Obtener los alumnos inscritos a un curso a partir del id de una evaluación.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function obtenerAlumnosPorEvaluacion($id)
     {
-        // Validar el id de la evaluación
+        Log::info("🔍 Obteniendo alumnos para evaluación ID: $id");
+
         $validator = Validator::make(['id' => $id], [
             'id' => 'required|integer|exists:evaluaciones,id',
         ]);
 
-        // Si la validación falla, retornar un error
         if ($validator->fails()) {
+            Log::error("Validación fallida para evaluación ID: $id", $validator->errors()->toArray());
             return response()->json([
                 'message' => 'El ID de la evaluación no es válido o no existe.',
                 'errors' => $validator->errors(),
             ], 400);
         }
 
-        // Obtener la evaluación con el curso y los alumnos inscritos
-        // $evaluacion = Evaluaciones::with(['grupoDeEvaluacion.curso.alumnos' => function ($query) use ($id) {
-        //     $query->leftJoin('evaluaciones_alumno', function($join) use ($id) {
-        //         $join->on('evaluaciones_alumno.alumno_id', '=', 'alumnos.id')
-        //              ->where('evaluaciones_alumno.evaluacion_id', '=', $id);
-        //     })
-        //     ->select('alumnos.*', 'evaluaciones_alumno.nota', 'evaluaciones_alumno.asistencia', 'evaluaciones_alumno.evaluacion_id');
-        // }])->find($id);
+        try {
+            // QUERY SIMPLIFICADA Y SIN DUPLICADOS
+            $evaluacionesAlumnos = DB::table('evaluaciones_alumno as ea')
+                ->join('alumnos as a', 'ea.alumno_id', '=', 'a.id')
+                ->join('evaluaciones as e', 'ea.evaluacion_id', '=', 'e.id')
+                ->select(
+                    'a.id',
+                    'a.nombres',
+                    'a.apellidos',
+                    'a.dni',
+                    'a.email',
+                    'a.celular',
+                    'ea.nota',
+                    'ea.asistencia',
+                    'ea.evaluacion_id',
+                    'e.tipo_evaluacion_id'
+                )
+                ->where('ea.evaluacion_id', $id)
+                ->distinct() // AÑADIR DISTINCT para evitar duplicados
+                ->orderBy('a.apellidos', 'asc')
+                ->orderBy('a.nombres', 'asc')
+                ->get();
 
-        $evaluacionesAlumnos = DB::table('evaluaciones_alumno as ea')
-        ->join('alumnos as a', 'ea.alumno_id', '=', 'a.id')
-        ->join('evaluaciones as e', 'ea.evaluacion_id', '=', 'e.id')
-        ->join('grupo_de_evaluaciones as ge', 'e.grupo_de_evaluaciones_id', '=', 'ge.id')
-        ->join('curso_alumno as ca', 'ca.alumno_id', '=', 'a.id')
-        ->select(
-            'a.*',
-            'ea.nota',
-            'ea.asistencia',
-            'ea.evaluacion_id',
-            'e.tipo_evaluacion_id'
-        )
-        ->where('ea.evaluacion_id', $id)
-        ->where('ca.estado_id', 2)
-        ->get();
+            Log::info("✅ Alumnos obtenidos exitosamente", [
+                'count' => $evaluacionesAlumnos->count(),
+                'evaluacion_id' => $id
+            ]);
 
+            // Debug: Log de los primeros registros
+            if ($evaluacionesAlumnos->count() > 0) {
+                Log::info("📊 Muestra de datos:", [
+                    'primer_alumno' => $evaluacionesAlumnos->first(),
+                    'ids_alumnos' => $evaluacionesAlumnos->pluck('id')->toArray()
+                ]);
+            }
 
-
-
-        // Retornar los datos de los alumnos en formato JSON
-        return response()->json($evaluacionesAlumnos);
+            return response()->json($evaluacionesAlumnos);
+        } catch (\Exception $e) {
+            Log::error("❌ Error al obtener alumnos: " . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
     }
-
 
     /**
      * Guardar las notas de los alumnos para una evaluación.
