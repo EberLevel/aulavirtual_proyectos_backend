@@ -187,6 +187,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('cursos/{id}', 'CursoController@show');
     $router->get('cursos/alumno/{alumnoId}', 'CursoAlumnoController@indexByPlan');
     $router->get('cursos/domain/{domainId}', 'CursoController@getCursosByDomain');
+    $router->get('cursos/docente/{docenteId}', 'CursoController@getCursosDocente');
     $router->get('cursos/{id}/syllabus', 'CursoController@getSyllabus');
     $router->get('cursos/carrera/{id}', 'CursoController@index');
     $router->get('unidades/all/{domain_id}', 'CursoController@getAllCursos');
