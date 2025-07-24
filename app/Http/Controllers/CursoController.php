@@ -231,15 +231,15 @@ class CursoController extends Controller
                 $cursoData['carreraId'] = $carreraExist->id;
 
                 // Validar que el área de formación existe
-           /*     $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
+             $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
                     ->where('domain_id', $cursoData['domain_id'])->first();
                 if (!$areaExist) {
                     throw new \Exception("Curso en posición {$index}: El área de formación con ID {$cursoData['areaFormacionId']} no existe");
                 }
-                $cursoData['areaFormacionId'] = $areaExist->id;*/
+                $cursoData['areaFormacionId'] = $areaExist->id;
 
                 // Validar que el módulo formativo existe
-              /*  $moduloExist = DB::table('modulos_formativos')->where('nombre', $cursoData['moduloFormativoId'])
+              /* $moduloExist = DB::table('modulos_formativos')->where('nombre', $cursoData['moduloFormativoId'])
                     ->where('domain_id', $cursoData['domain_id'])->first();
                 if (!$moduloExist) {
                     throw new \Exception("Curso en posición {$index}: El módulo formativo con ID {$cursoData['moduloFormativoId']} no existe");
@@ -415,6 +415,28 @@ class CursoController extends Controller
         ]);
 
         return response()->json($curso, 200);
+    }
+
+    public function getCursosDocente($docenteId)
+   
+    { 
+      
+
+        $cursos = Curso::join('carreras', 'carreras.id', '=', 'cursos.carrera_id')
+        ->join('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
+        ->join('ciclos','ciclos.id', '=','cursos.ciclo_id')
+        ->where('cursos.docente_id', $docenteId)
+        ->select(
+            'cursos.nombre as curso_nombre',
+            'carreras.nombres as carrera_nombre',
+            'plan_de_estudios.nombre as plan_estudio_nombre',
+            'ciclos.nombre as ciclo'
+        )
+        ->get();
+
+
+        return response()->json($cursos);
+
     }
 
     public function getAllCursos($domain_id)
