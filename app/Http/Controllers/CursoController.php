@@ -203,6 +203,23 @@ class CursoController extends Controller
                 return response()->json(['error' => 'Se requiere un array de cursos'], 400);
             }
 
+            $cantidadCursos = count($cursosData);
+            $Totalcred = 0;
+            foreach ($cursosData as $cursoOriginal) {
+                  
+                        $Totalcred += $cursoOriginal['cantidadCreditos'];
+                     
+                    
+                }
+            
+                $formulaSuma = $cantidadCursos > 0 && $Totalcred > 0
+                ? round(($cantidadCursos * 100) / $Totalcred, 2)
+                : 0; 
+          
+           
+
+           
+
             $cursosCreados = [];
             $cursosActualizados = [];
 
@@ -272,6 +289,7 @@ class CursoController extends Controller
                     'cantidad_de_creditos' => $cursoData['cantidadCreditos'],
                     'cantidad_de_horas' => $cursoData['cantidadHoras'],
                     'horas_practicas' => $cursoData['horasPracticas'],
+                    'porcentaje_de_creditos' => $formulaSuma,
                     'carrera_id' => $cursoData['carreraId'],
                     'syllabus' => $cursoData['syllabus'] ?? null,
                     'tema' => $cursoData['tema'] ?? null,
@@ -281,6 +299,9 @@ class CursoController extends Controller
                     'descripcion_competencia' => $cursoData['descripcionCompetencia'] ?? null,
                     'updated_at' => Carbon::now()
                 ];
+
+
+              
 
                 $curso = null;
                 $esActualizacion = false;
