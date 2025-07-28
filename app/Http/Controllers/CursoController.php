@@ -453,7 +453,10 @@ class CursoController extends Controller
             'descripcion_competencia' => $request->descripcion_competencia,
         ]);
 
-        return response()->json($curso, 200);
+        return response()->json([
+            'message' => 'Curso Actualizado',
+            'data' => $curso
+        ], 200);
     }
 
     public function getCursosDocente($docenteId)
