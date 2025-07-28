@@ -207,14 +207,13 @@ class CursoController extends Controller
             $Totalcred = 0;
             foreach ($cursosData as $cursoOriginal) {
                   
-                        $Totalcred += $cursoOriginal['cantidadCreditos'];
-                     
-                    
+                        $Totalcred += $cursoOriginal['cantidadCreditos'] ;
+                                         
                 }
             
-                $formulaSuma = $cantidadCursos > 0 && $Totalcred > 0
+               /* $formulaSuma = $cantidadCursos > 0 && $Totalcred > 0
                 ? round(($cantidadCursos * 100) / $Totalcred, 2)
-                : 0; 
+                : 0; */
           
            
 
@@ -223,9 +222,28 @@ class CursoController extends Controller
             $cursosCreados = [];
             $cursosActualizados = [];
 
+
+            $gruposCreditos = [];
+            foreach ($cursosData as $curso) {
+                $clave = $curso['carreraId'] . '|' . $curso['estadoId'];
+
+                if (!isset($gruposCreditos[$clave])) {
+                    $gruposCreditos[$clave] = 0;
+                }
+
+                $gruposCreditos[$clave] += $curso['cantidadCreditos'];
+            }    
+
             // Procesar cada curso del array
             foreach ($cursosData as $index => $cursoData) {
 
+                $claveGrupo = $cursoData['carreraId'] . '|' . $cursoData['estadoId'];
+                $totalCreditosGrupo = $gruposCreditos[$claveGrupo] ?? 0;
+            
+                $porcentaje = $totalCreditosGrupo > 0
+                    ? round(($cursoData['cantidadCreditos'] * 100) / $totalCreditosGrupo, 2)
+                    : 0;
+                
                 // Verificar si el curso ya existe por código
                 $cursoExistente = Curso::where('codigo', $cursoData['codigo'])
                     ->where('domain_id', $cursoData['domain_id'])
@@ -289,7 +307,7 @@ class CursoController extends Controller
                     'cantidad_de_creditos' => $cursoData['cantidadCreditos'],
                     'cantidad_de_horas' => $cursoData['cantidadHoras'],
                     'horas_practicas' => $cursoData['horasPracticas'],
-                    'porcentaje_de_creditos' => $formulaSuma,
+                    'porcentaje_de_creditos' => $porcentaje, 
                     'carrera_id' => $cursoData['carreraId'],
                     'syllabus' => $cursoData['syllabus'] ?? null,
                     'tema' => $cursoData['tema'] ?? null,
@@ -486,11 +504,16 @@ class CursoController extends Controller
         return response()->json($courses);
     }
 
-    public function getTotalCreditsByCurso($domain_id)
+    public function getTotalCreditsByCurso($domain_id, $carrera_id, $estado_id)
     {
-        $totalCreditos = Curso::where('domain_id', $domain_id)->sum('cantidad_de_creditos');
+        $totalCreditos = Curso::where('domain_id', $domain_id)
+            ->where('carrera_id', $carrera_id)
+            ->where('estado_id', $estado_id)
+            ->sum('cantidad_de_creditos');
+
         return response()->json(['total_creditos' => $totalCreditos], 200);
     }
+
 
 
     public function destroy($id)
