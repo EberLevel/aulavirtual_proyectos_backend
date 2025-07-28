@@ -25,10 +25,11 @@ class OfertasEmpleoController extends Controller
     {
         // Validación de los datos de entrada usando Validator
         $this->validate($request, [
-            'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO',
+            'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO,ACTIVO,PAUSADO',
             'empresa' => 'required|max:191',
             'telefono' => 'required|max:20',
-            'nombre_puesto' => 'required|max:20',
+            'nombre_puesto' => 'required|max:100',
+            'url' => 'nullable|url|max:500',
             'requisitos' => 'nullable|max:65535', // Ajustado para texto más largo
         ]);
 
@@ -43,8 +44,10 @@ class OfertasEmpleoController extends Controller
 
     public function show($id)
     {
-        // Buscar la oferta de empleo por ID
-        $oferta_empleo = OfertasEmpleo::find($id);
+        // Buscar la oferta de empleo por ID y filtrar por domain_id
+        $oferta_empleo = OfertasEmpleo::where('id', $id)
+                                     ->where('domain_id', $this->domain_id)
+                                     ->first();
 
         // Si no se encuentra la oferta de empleo, retornar error 404
         if (!$oferta_empleo) {
@@ -56,17 +59,21 @@ class OfertasEmpleoController extends Controller
 
     public function update(Request $request, $id)
     {
+
         // Validación de los datos de entrada usando Validator
         $this->validate($request, [
-            'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO',
+            'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO,ACTIVO,PAUSADO',
             'empresa' => 'required|max:191',
             'telefono' => 'required|max:20',
-            'nombre_puesto' => 'required|max:20',
+            'nombre_puesto' => 'required|max:100',
+            'url' => 'nullable|url|max:500',
             'requisitos' => 'nullable|max:65535', // Ajustado para texto más largo
         ]);
 
-        // Buscar la oferta de empleo por ID
-        $oferta_empleo = OfertasEmpleo::find($id);
+        // Buscar la oferta de empleo por ID y filtrar por domain_id
+        $oferta_empleo = OfertasEmpleo::where('id', $id)
+                                     ->where('domain_id', $this->domain_id)
+                                     ->first();
 
         // Si no se encuentra la oferta de empleo, retornar error 404
         if (!$oferta_empleo) {
@@ -84,8 +91,10 @@ class OfertasEmpleoController extends Controller
 
     public function destroy($id)
     {
-        // Buscar la oferta de empleo por ID
-        $oferta_empleo = OfertasEmpleo::find($id);
+        // Buscar la oferta de empleo por ID y filtrar por domain_id
+        $oferta_empleo = OfertasEmpleo::where('id', $id)
+                                     ->where('domain_id', $this->domain_id)
+                                     ->first();
 
         // Si no se encuentra la oferta de empleo, retornar error 404
         if (!$oferta_empleo) {

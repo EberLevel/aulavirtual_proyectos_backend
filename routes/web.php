@@ -470,7 +470,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('ofertas-empleo', 'OfertasEmpleoController@index');
     $router->post('ofertas-empleo', 'OfertasEmpleoController@store');
     $router->get('ofertas-empleo/{id}', 'OfertasEmpleoController@show');
-    $router->put('ofertas-empleo/{id}', 'OfertasEmpleoController@update');
+    $router->post('ofertas-empleo/{id}', 'OfertasEmpleoController@update');
     $router->delete('ofertas-empleo/{id}', 'OfertasEmpleoController@destroy');
 
     // Rutas para proyectos
