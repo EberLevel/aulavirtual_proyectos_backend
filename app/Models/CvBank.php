@@ -13,6 +13,7 @@ use App\Models\Reference;
 use App\Models\WorkExperience;
 use App\Models\Domains;
 use App\Models\User;
+use App\Models\Ano;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -46,7 +47,9 @@ class CvBank extends Model
         'sex',
         'date_affiliation',
         'estado_actual_id',
+        'estado_actual_postulante_id', // Nuevo campo
         'domain_id',
+        'ano_id', // Nuevo campo
         'color_id',
         'link_facebook',
         'link_instagram',
@@ -95,6 +98,12 @@ class CvBank extends Model
         return $this->belongsTo(EstadoActual::class, 'estado_actual_id');
     }
 
+    // Nueva relación para estado actual postulante
+    public function estadoActualPostulante()
+    {
+        return $this->belongsTo(EstadoActual::class, 'estado_actual_postulante_id');
+    }
+
     public function education_degree()
     {
         return $this->belongsTo(GradoInstruccion::class, 'education_degree_id');
@@ -113,6 +122,12 @@ class CvBank extends Model
     public function domain()
     {
         return $this->belongsTo(Domains::class, 'domain_id');
+    }
+
+    // Nueva relación para año
+    public function ano()
+    {
+        return $this->belongsTo(Ano::class, 'ano_id');
     }
 
     // Scopes for filtering
@@ -141,6 +156,22 @@ class CvBank extends Model
     {
         if ($current_state_id) {
             return $query->where('estado_actual_id', $current_state_id);
+        }
+    }
+
+    // Nuevo scope para filtrar por estado actual postulante
+    public function scopeByEstadoActualPostulanteId($query, $estado_actual_postulante_id)
+    {
+        if ($estado_actual_postulante_id) {
+            return $query->where('estado_actual_postulante_id', $estado_actual_postulante_id);
+        }
+    }
+
+    // Nuevo scope para filtrar por año
+    public function scopeByAnoId($query, $ano_id)
+    {
+        if ($ano_id) {
+            return $query->where('ano_id', $ano_id);
         }
     }
 }
