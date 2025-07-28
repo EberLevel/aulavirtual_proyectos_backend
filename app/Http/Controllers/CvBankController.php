@@ -17,7 +17,7 @@ class CvBankController extends Controller
 {
     public function index(Request $request, $domain_id)
     {
-        $cvBanks = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document')
+        $cvBanks = CvBank::with(['marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'estadoActualPostulante', 'ano'])
             ->where('domain_id', $domain_id)
             ->byTerm($request->term)
             ->byProfessionId($request->profession_id)
@@ -108,7 +108,6 @@ class CvBankController extends Controller
     }
 
     public function store(Request $request)
-    
     {    
         try {
             // Log all incoming data for debugging
@@ -120,7 +119,7 @@ class CvBankController extends Controller
                 'password' => 'required|string|min:6',
                 'position_code' => 'nullable|string|max:100',
                 'code' => 'nullable|string|max:100',
-                'identification_document_id' => 'nullable|numeric', // Cambiado a numeric para aceptar strings
+                'identification_document_id' => 'nullable|numeric',
                 'names' => 'nullable|string|max:100',
                 'phone' => 'nullable|string|max:20',
                 'marital_status_id' => 'nullable|numeric',
@@ -133,8 +132,10 @@ class CvBankController extends Controller
                 'email' => 'nullable|email|max:100',
                 'sex' => 'nullable|string|max:10',
                 'estado_actual_id' => 'nullable|numeric',
-                'domain_id' => 'required|numeric|exists:domains,id', // Cambiado a numeric
+                'estado_actual_postulante_id' => 'nullable|numeric', // Nuevo campo
+                'domain_id' => 'required|numeric|exists:domains,id',
                 'color_id' => 'nullable|numeric',
+                'ano_id' => 'nullable|numeric', // Nuevo campo
                 'link_facebook' => 'nullable|string|max:255',
                 'link_instagram' => 'nullable|string|max:255',
                 'link_tik_tok' => 'nullable|string|max:255',
@@ -223,9 +224,11 @@ class CvBankController extends Controller
                 'sex' => $request->input('sex'),
                 'date_affiliation' => $request->input('date_affiliation') ?: date('Y-m-d'),
                 'estado_actual_id' => $request->input('estado_actual_id'),
+                'estado_actual_postulante_id' => $request->input('estado_actual_postulante_id'), // Nuevo campo
                 'domain_id' => $request->input('domain_id'),
                 'user_id' => $user->id,
                 'color_id' => $request->input('color_id'),
+                'ano_id' => $request->input('ano_id'), // Nuevo campo
                 'link_facebook' => $request->input('link_facebook'),
                 'link_instagram' => $request->input('link_instagram'),
                 'link_tik_tok' => $request->input('link_tik_tok'),
@@ -307,8 +310,10 @@ class CvBankController extends Controller
                 'email' => 'nullable|email|max:100',
                 'sex' => 'nullable|string|max:10',
                 'estado_actual_id' => 'nullable|numeric',
+                'estado_actual_postulante_id' => 'nullable|numeric', // Nuevo campo
                 'domain_id' => 'required|numeric|exists:domains,id',
                 'color_id' => 'nullable|numeric',
+                'ano_id' => 'nullable|numeric', // Nuevo campo
                 'link_facebook' => 'nullable|string|max:255',
                 'link_instagram' => 'nullable|string|max:255',
                 'link_tik_tok' => 'nullable|string|max:255',
@@ -336,7 +341,10 @@ class CvBankController extends Controller
 
             Log::info('Validated data for update:', ['data' => $data]);
             
+            // Incluir los nuevos campos en la actualización
             $data['nivel_estudios_id'] = $request->input('nivel_estudios_id');
+            $data['estado_actual_postulante_id'] = $request->input('estado_actual_postulante_id'); // Nuevo campo
+            $data['ano_id'] = $request->input('ano_id'); // Nuevo campo
             
             if ($request->filled('email')) {
                 $userExist = User::where('email', $request->input('email'))
@@ -418,7 +426,7 @@ class CvBankController extends Controller
     public function show($id)
     {
         try {
-            $cvBank = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain')
+            $cvBank = CvBank::with(['marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain', 'estadoActualPostulante', 'ano'])
                 ->where('id', $id)
                 ->first();
 
@@ -439,7 +447,7 @@ class CvBankController extends Controller
     public function showByUser($id)
     {
         try {
-            $cvBank = CvBank::with('marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain')
+            $cvBank = CvBank::with(['marital_status', 'profession', 'estadoActual', 'education_degree', 'identification_document', 'domain', 'estadoActualPostulante', 'ano'])
                 ->where('user_id', $id)
                 ->first();
 
@@ -586,6 +594,8 @@ class CvBankController extends Controller
                         'domain_id' => $domainId,
                         'user_id' => $user->id,
                         'estado_actual_id' => 1,
+                        'estado_actual_postulante_id' => null,
+                        'ano_id' => null,
                     ];
 
                     $cvBank = CvBank::create($cvBankData);
