@@ -16,6 +16,7 @@ class OfertasEmpleo extends Model
         'empresa', 
         'telefono', 
         'nombre_puesto', 
+        'url',
         'requisitos',
         'domain_id'
     ];
