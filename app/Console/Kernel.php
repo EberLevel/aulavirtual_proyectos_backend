@@ -21,6 +21,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\ShowUserInfoCommand::class,
         \App\Console\Commands\GeneratePasswordResetUrlCommand::class,
         \App\Console\Commands\TestPostulanteEmailCommand::class,
+        \App\Console\Commands\MigrarEmpresaAPlainEmpleador::class,
     ];
 
     /**

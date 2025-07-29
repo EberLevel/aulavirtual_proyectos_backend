@@ -17,7 +17,9 @@ class OfertasEmpleoController extends Controller
     public function index()
     {
         // Filtrar ofertas de empleo por domain_id si es necesario
-        $ofertas = OfertasEmpleo::where('domain_id', $this->domain_id)->paginate(10);
+        $ofertas = OfertasEmpleo::with('empleador')
+            ->where('domain_id', $this->domain_id)
+            ->paginate(10);
         return response()->json($ofertas, 200);
     }
 
@@ -26,15 +28,36 @@ class OfertasEmpleoController extends Controller
         // Validación de los datos de entrada usando Validator
         $this->validate($request, [
             'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO,ACTIVO,PAUSADO',
-            'empresa' => 'required|max:191',
+            'empleador_id' => 'nullable|exists:empleadores,id',
+            'plain_empleador' => 'nullable|max:191',
             'telefono' => 'required|max:20',
             'nombre_puesto' => 'required|max:100',
             'url' => 'nullable|url|max:500',
             'requisitos' => 'nullable|max:65535', // Ajustado para texto más largo
         ]);
 
-        // Crear una nueva oferta de empleo con los datos proporcionados y el domain_id del constructor
-        $oferta_empleo = OfertasEmpleo::create(array_merge($request->all(), ['domain_id' => $this->domain_id]));
+        if (!$request->filled('empleador_id') && !$request->filled('plain_empleador')) {
+            return response()->json([
+                'message' => 'Debe proporcionar empleador_id o plain_empleador.'
+            ], 422);
+        }
+
+        // Si se proporciona empleador_id, se asegura de que plain_empleador esté vacío
+        $data = $request->only([
+            'estado', 
+            'empleador_id', 
+            'plain_empleador', 
+            'telefono', 
+            'nombre_puesto', 
+            'url', 
+            'requisitos'
+        ]);
+
+        // Asegurarse de que el domain_id se incluya en los datos
+        $data['domain_id'] = $this->domain_id;
+
+        // Crear la oferta de empleo
+        $oferta_empleo = OfertasEmpleo::create($data);
 
         return response()->json([
             'message' => 'Oferta de empleo creada correctamente',
@@ -45,9 +68,10 @@ class OfertasEmpleoController extends Controller
     public function show($id)
     {
         // Buscar la oferta de empleo por ID y filtrar por domain_id
-        $oferta_empleo = OfertasEmpleo::where('id', $id)
-                                     ->where('domain_id', $this->domain_id)
-                                     ->first();
+        $oferta_empleo = OfertasEmpleo::with('empleador')
+                                    ->where('id', $id)
+                                    ->where('domain_id', $this->domain_id)
+                                    ->first();
 
         // Si no se encuentra la oferta de empleo, retornar error 404
         if (!$oferta_empleo) {
@@ -63,12 +87,19 @@ class OfertasEmpleoController extends Controller
         // Validación de los datos de entrada usando Validator
         $this->validate($request, [
             'estado' => 'required|in:PENDIENTE,INICIADO,FINALIZADO,CANCELADO,ACTIVO,PAUSADO',
-            'empresa' => 'required|max:191',
+            'empleador_id' => 'nullable|exists:empleadores,id',
+            'plain_empleador' => 'nullable|max:191',
             'telefono' => 'required|max:20',
             'nombre_puesto' => 'required|max:100',
             'url' => 'nullable|url|max:500',
             'requisitos' => 'nullable|max:65535', // Ajustado para texto más largo
         ]);
+
+        if (!$request->filled('empleador_id') && !$request->filled('plain_empleador')) {
+            return response()->json([
+                'message' => 'Debe proporcionar empleador_id o plain_empleador.'
+            ], 422);
+        }
 
         // Buscar la oferta de empleo por ID y filtrar por domain_id
         $oferta_empleo = OfertasEmpleo::where('id', $id)
@@ -80,8 +111,18 @@ class OfertasEmpleoController extends Controller
             return response()->json(['message' => 'Oferta de empleo no encontrada'], 404);
         }
 
-        // Actualizar la oferta de empleo con los nuevos datos
-        $oferta_empleo->update($request->all());
+        // Actualizar solo los campos permitidos
+        $data = $request->only([
+            'estado',
+            'empleador_id',
+            'plain_empleador',
+            'telefono',
+            'nombre_puesto',
+            'url',
+            'requisitos'
+        ]);
+
+        $oferta_empleo->update($data);
 
         return response()->json([
             'message' => 'Oferta de empleo actualizada correctamente',

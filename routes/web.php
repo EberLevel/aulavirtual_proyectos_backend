@@ -546,4 +546,7 @@ $router->group(['prefix' => 'api/{domain}', 'middleware' => ['validate.domain']]
     $router->get('proyectos/{proyectoId}/tareas', 'TareasController@getByProyecto');
     $router->get('tareas/{proyectoId}/modulos', 'TareasController@getByModuloProyecto');
 
+    // Empleador
+    $router->post('empleadores', 'EmpleadorController@store');
+    $router->get('empleadores/usuario/{user_id}', 'EmpleadorController@getByUserId');
 });
