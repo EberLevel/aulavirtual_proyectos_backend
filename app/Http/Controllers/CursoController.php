@@ -86,9 +86,9 @@ class CursoController extends Controller
         return response()->json($courses);
     }
 
-    public function getCursosByPlanEstudioYCarrera($planEstudioId, $carreraId,$alumnoId=null)
+    public function getCursosByPlanEstudioYCarrera($planEstudioId, $carreraId, $alumnoId = null)
     {
-        if($alumnoId){
+        if ($alumnoId) {
             //select all curso_alumno where alumno_id = $alumnoId
             return DB::table('curso_alumno')
                 ->leftJoin('cursos', 'curso_alumno.curso_id', '=', 'cursos.id')
@@ -132,48 +132,67 @@ class CursoController extends Controller
     }
 
 
+    // Crear un nuevo curso
     public function store(Request $request)
     {
-        $this->validate($request, [
-            'codigo' => 'required|string|max:255',
-            'nombreCurso' => 'required|string|max:255',
-            'cicloId' => 'required|integer',
-            'areaFormacionId' => 'required|integer',
-            'moduloFormativoId' => 'required|string',
-            'cantidadCreditos' => 'required|numeric',
-            'porcentajeCreditos' => 'required|numeric', 
-            'cantidadHoras' => 'required|integer',
-            'horasPracticas' => 'required|integer',
-            'carreraId' => 'required|integer',
-            'syllabus' => 'string', 
-            'tema' => 'nullable|string',
-            'estadoId' => 'nullable|integer',
-            'domain_id' => 'required',
-            'asignacionDocentesId' => 'nullable',
-            'descripcion_competencia'=> 'nullable|string|max:255',
-        ]);
+        DB::beginTransaction();
 
-        $curso = Curso::create([
-            'codigo' => $request->codigo,
-            'nombre' => $request->nombreCurso,
-            'ciclo_id' => $request->cicloId,
-            'area_de_formacion_id' => $request->areaFormacionId,
-            'modulo_formativo_id' => $request->moduloFormativoId,
-            'cantidad_de_creditos' => $request->cantidadCreditos,
-            'porcentaje_de_creditos' => $request->porcentajeCreditos,
-            'cantidad_de_horas' => $request->cantidadHoras,
-            'horas_practicas' => $request->horasPracticas,
-            'carrera_id' => $request->carreraId,
-            'syllabus' => $request->syllabus,
-            'tema' => $request->tema,
-            'estado_id' => $request->estadoId,
-            'domain_id' => $request->domain_id,
-            'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
-            'descripcion_competencia' => $request->descripcion_competencia,
-            'created_at' => Carbon::now(),
-        ]);
+        try {
+            $this->validate($request, [
+                'codigo' => 'required|string|max:255',
+                'nombreCurso' => 'required|string|max:255',
+                'cicloId' => 'required|integer',
+                'areaFormacionId' => 'required|integer',
+                'moduloFormativoId' => 'required|string',
+                'cantidadCreditos' => 'required|numeric',
+                'porcentajeCreditos' => 'required|numeric',
+                'cantidadHoras' => 'required|integer',
+                'horasPracticas' => 'required|integer',
+                'carreraId' => 'required|integer',
+                'syllabus' => 'string',
+                'tema' => 'nullable|string',
+                'estadoId' => 'nullable|integer',
+                'domain_id' => 'required',
+                'asignacionDocentesId' => 'nullable',
+                'descripcion_competencia' => 'nullable|string|max:255',
+            ]);
 
-        return response()->json($curso, 201);
+            // Crear el curso
+            $curso = Curso::create([
+                'codigo' => $request->codigo,
+                'nombre' => $request->nombreCurso,
+                'ciclo_id' => $request->cicloId,
+                'area_de_formacion_id' => $request->areaFormacionId,
+                'modulo_formativo_id' => $request->moduloFormativoId,
+                'cantidad_de_creditos' => $request->cantidadCreditos,
+                'porcentaje_de_creditos' => $request->porcentajeCreditos,
+                'cantidad_de_horas' => $request->cantidadHoras,
+                'horas_practicas' => $request->horasPracticas,
+                'carrera_id' => $request->carreraId,
+                'syllabus' => $request->syllabus,
+                'tema' => $request->tema,
+                'estado_id' => $request->estadoId,
+                'domain_id' => $request->domain_id,
+                'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
+                'descripcion_competencia' => $request->descripcion_competencia,
+                'created_at' => Carbon::now(),
+            ]);
+
+            // 🚀 EL OBSERVER SE ENCARGA AUTOMÁTICAMENTE DE LOS ENLACES CON ALUMNOS
+
+            DB::commit();
+
+            return response()->json([
+                'curso' => $curso,
+                'message' => 'Curso creado correctamente. Enlaces automáticos con alumnos aplicados.'
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Error al crear el curso: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function storeMasivos(Request $request)
@@ -194,7 +213,7 @@ class CursoController extends Controller
                 '*.estadoId' => 'required|string',
                 '*.domain_id' => 'required',
                 '*.asignacionDocentesId' => 'nullable',
-                '*.descripcionCompetencia'=> 'nullable',
+                '*.descripcionCompetencia' => 'nullable',
             ]);
 
             // Validar que el request sea un array
@@ -206,22 +225,11 @@ class CursoController extends Controller
             $cantidadCursos = count($cursosData);
             $Totalcred = 0;
             foreach ($cursosData as $cursoOriginal) {
-                  
-                        $Totalcred += $cursoOriginal['cantidadCreditos'] ;
-                                         
-                }
-            
-               /* $formulaSuma = $cantidadCursos > 0 && $Totalcred > 0
-                ? round(($cantidadCursos * 100) / $Totalcred, 2)
-                : 0; */
-          
-           
-
-           
+                $Totalcred += $cursoOriginal['cantidadCreditos'];
+            }
 
             $cursosCreados = [];
             $cursosActualizados = [];
-
 
             $gruposCreditos = [];
             foreach ($cursosData as $curso) {
@@ -232,18 +240,18 @@ class CursoController extends Controller
                 }
 
                 $gruposCreditos[$clave] += $curso['cantidadCreditos'];
-            }    
+            }
 
             // Procesar cada curso del array
             foreach ($cursosData as $index => $cursoData) {
 
                 $claveGrupo = $cursoData['carreraId'] . '|' . $cursoData['estadoId'];
                 $totalCreditosGrupo = $gruposCreditos[$claveGrupo] ?? 0;
-            
+
                 $porcentaje = $totalCreditosGrupo > 0
                     ? round(($cursoData['cantidadCreditos'] * 100) / $totalCreditosGrupo, 2)
                     : 0;
-                
+
                 // Verificar si el curso ya existe por código
                 $cursoExistente = Curso::where('codigo', $cursoData['codigo'])
                     ->where('domain_id', $cursoData['domain_id'])
@@ -266,20 +274,12 @@ class CursoController extends Controller
                 $cursoData['carreraId'] = $carreraExist->id;
 
                 // Validar que el área de formación existe
-             $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
+                $areaExist = DB::table('area_de_formacion')->where('nombre', $cursoData['areaFormacionId'])
                     ->where('domain_id', $cursoData['domain_id'])->first();
                 if (!$areaExist) {
                     throw new \Exception("Curso en posición {$index}: El área de formación con ID {$cursoData['areaFormacionId']} no existe");
                 }
                 $cursoData['areaFormacionId'] = $areaExist->id;
-
-                // Validar que el módulo formativo existe
-              /* $moduloExist = DB::table('modulos_formativos')->where('nombre', $cursoData['moduloFormativoId'])
-                    ->where('domain_id', $cursoData['domain_id'])->first();
-                if (!$moduloExist) {
-                    throw new \Exception("Curso en posición {$index}: El módulo formativo con ID {$cursoData['moduloFormativoId']} no existe");
-                }
-                $cursoData['moduloFormativoId'] = $moduloExist->id;*/
 
                 // Validar que el estado existe
                 $estadoExist = DB::table('plan_de_estudios')->where('nombre', $cursoData['estadoId'])
@@ -307,7 +307,7 @@ class CursoController extends Controller
                     'cantidad_de_creditos' => $cursoData['cantidadCreditos'],
                     'cantidad_de_horas' => $cursoData['cantidadHoras'],
                     'horas_practicas' => $cursoData['horasPracticas'],
-                    'porcentaje_de_creditos' => $porcentaje, 
+                    'porcentaje_de_creditos' => $porcentaje,
                     'carrera_id' => $cursoData['carreraId'],
                     'syllabus' => $cursoData['syllabus'] ?? null,
                     'tema' => $cursoData['tema'] ?? null,
@@ -318,9 +318,6 @@ class CursoController extends Controller
                     'updated_at' => Carbon::now()
                 ];
 
-
-              
-
                 $curso = null;
                 $esActualizacion = false;
 
@@ -329,12 +326,13 @@ class CursoController extends Controller
                     $cursoExistente->update($cursoDataForDB);
                     $curso = $cursoExistente->fresh(); // Obtener datos actualizados
                     $esActualizacion = true;
-
                 } else {
                     // CREAR nuevo curso
                     $cursoDataForDB['created_at'] = Carbon::now();
                     $curso = Curso::create($cursoDataForDB);
                 }
+
+                // 🚀 EL OBSERVER SE ENCARGA AUTOMÁTICAMENTE DE LOS ENLACES CON ALUMNOS
 
                 // Agregar a la lista correspondiente
                 $cursoInfo = [
@@ -356,23 +354,15 @@ class CursoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Proceso completado: ' . count($cursosCreados) . ' cursos creados, ' . count($cursosActualizados) . ' cursos actualizados',
+                'message' => 'Proceso completado: ' . count($cursosCreados) . ' cursos creados, ' . count($cursosActualizados) . ' cursos actualizados. Enlaces automáticos con alumnos aplicados.',
                 'cursos_creados' => count($cursosCreados),
                 'cursos_actualizados' => count($cursosActualizados),
                 'total_procesados' => count($cursosData),
                 'cursos_nuevos' => $cursosCreados,
                 'cursos_actualizados' => $cursosActualizados
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
-
-            // Log del error para debugging
-            \Log::error('Error al crear/actualizar cursos masivos: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
 
             return response()->json([
                 'message' => 'Error al procesar los cursos: ' . $e->getMessage(),
@@ -381,6 +371,73 @@ class CursoController extends Controller
         }
     }
 
+    // Actualizar un curso existente
+    public function update(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $this->validate($request, [
+                'codigo' => 'required|string|max:255',
+                'nombreCurso' => 'required|string|max:255',
+                'cicloId' => 'required|integer',
+                'areaFormacionId' => 'required|integer',
+                'moduloFormativoId' => 'required|string',
+                'cantidadCreditos' => 'required|numeric',
+                'porcentajeCreditos' => 'required|numeric',
+                'cantidadHoras' => 'required|integer',
+                'horasPracticas' => 'required|integer',
+                'carreraId' => 'required|integer',
+                'syllabus' => 'string',
+                'tema' => 'nullable|string',
+                'estadoId' => 'nullable|integer',
+                'domain_id' => 'required',
+                'asignacionDocentesId' => 'nullable',
+                'descripcion_competencia' => 'nullable|string|max:255',
+            ]);
+
+            $curso = Curso::find($id);
+
+            if (!$curso) {
+                return response()->json(['error' => 'Curso no encontrado'], 404);
+            }
+
+            // Actualizar el curso
+            $curso->update([
+                'codigo' => $request->codigo,
+                'nombre' => $request->nombreCurso,
+                'ciclo_id' => $request->cicloId,
+                'area_de_formacion_id' => $request->areaFormacionId,
+                'modulo_formativo_id' => $request->moduloFormativoId,
+                'cantidad_de_creditos' => $request->cantidadCreditos,
+                'porcentaje_de_creditos' => $request->porcentajeCreditos,
+                'cantidad_de_horas' => $request->cantidadHoras,
+                'horas_practicas' => $request->horasPracticas,
+                'carrera_id' => $request->carreraId,
+                'syllabus' => $request->syllabus,
+                'tema' => $request->tema,
+                'estado_id' => $request->estadoId,
+                'domain_id' => $request->domain_id,
+                'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
+                'descripcion_competencia' => $request->descripcion_competencia,
+            ]);
+
+            // 🚀 EL OBSERVER SE ENCARGA AUTOMÁTICAMENTE DE RE-SINCRONIZAR ALUMNOS SI CAMBIÓ carrera_id O estado_id
+
+            DB::commit();
+
+            return response()->json([
+                'curso' => $curso,
+                'message' => 'Curso actualizado correctamente. Enlaces automáticos re-sincronizados.'
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Error al actualizar el curso: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function show($id)
     {
@@ -412,73 +469,27 @@ class CursoController extends Controller
         return response()->json(['Exito' => true, 'Datos' => $course], 200);
     }
 
-    public function update(Request $request, $id)
-    {
-        $this->validate($request, [
-            'codigo' => 'required|string|max:255',
-            'nombreCurso' => 'required|string|max:255',
-            'cicloId' => 'required|integer',
-            'areaFormacionId' => 'required|integer',
-            'moduloFormativoId' => 'required|string',
-            'cantidadCreditos' => 'required|numeric',
-            'porcentajeCreditos' => 'required',
-            'cantidadHoras' => 'required|integer',
-            'horasPracticas' => 'required|integer',
-            'carreraId' => 'required|integer',
-            'syllabus' => 'nullable|string',
-            'tema' => 'nullable|string',
-            'estadoId' => 'required|integer',
-            'domain_id' => 'required',
-            'asignacionDocentesId' => 'nullable',
-            'descripcion_competencia' => 'nullable|string|max:255',
-        ]);
 
-        $curso = Curso::findOrFail($id);
-        $curso->update([
-            'codigo' => $request->codigo,
-            'nombre' => $request->nombreCurso,
-            'ciclo_id' => $request->cicloId,
-            'area_de_formacion_id' => $request->areaFormacionId,
-            'modulo_formativo_id' => $request->moduloFormativoId,
-            'cantidad_de_creditos' => $request->cantidadCreditos,
-            'porcentaje_de_creditos' => $request->porcentajeCreditos,
-            'cantidad_de_horas' => $request->cantidadHoras,
-            'horas_practicas' => $request->horasPracticas,
-            'carrera_id' => $request->carreraId,
-            'syllabus' => $request->syllabus,
-            'tema' => $request->tema,
-            'estado_id' => $request->estadoId,
-            'domain_id' => $request->domain_id,
-            'docente_id' => is_array($request->asignacionDocentesId) ? null : $request->asignacionDocentesId,
-            'descripcion_competencia' => $request->descripcion_competencia,
-        ]);
-
-        return response()->json([
-            'message' => 'Curso Actualizado',
-            'data' => $curso
-        ], 200);
-    }
 
     public function getCursosDocente($docenteId)
-   
-    { 
-      
+
+    {
+
 
         $cursos = Curso::join('carreras', 'carreras.id', '=', 'cursos.carrera_id')
-        ->join('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
-        ->join('ciclos','ciclos.id', '=','cursos.ciclo_id')
-        ->where('cursos.docente_id', $docenteId)
-        ->select(
-            'cursos.nombre as curso_nombre',
-            'carreras.nombres as carrera_nombre',
-            'plan_de_estudios.nombre as plan_estudio_nombre',
-            'ciclos.nombre as ciclo'
-        )
-        ->get();
+            ->join('plan_de_estudios', 'plan_de_estudios.id', '=', 'cursos.estado_id')
+            ->join('ciclos', 'ciclos.id', '=', 'cursos.ciclo_id')
+            ->where('cursos.docente_id', $docenteId)
+            ->select(
+                'cursos.nombre as curso_nombre',
+                'carreras.nombres as carrera_nombre',
+                'plan_de_estudios.nombre as plan_estudio_nombre',
+                'ciclos.nombre as ciclo'
+            )
+            ->get();
 
 
         return response()->json($cursos);
-
     }
 
     public function getAllCursos($domain_id)
