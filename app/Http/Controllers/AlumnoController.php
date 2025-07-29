@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use App\Traits\UserTrait;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class AlumnoController extends Controller
 {
@@ -73,12 +74,14 @@ class AlumnoController extends Controller
             if (!$promocion) {
                 return response()->json(['message' => 'Promoción no encontrada'], 400);
             }
+
             //validar que el email no exista
             $email = $request->input('email');
             $emailExist = DB::table('users')->where('email', $email)->first();
             if ($emailExist) {
                 return response()->json(['message' => 'El email ya existe'], 400);
             }
+
             // Procesar imágenes en base64 si están presentes
             $fotoPerfil = $request->input('fotoPerfil');
             $fotoCarnet = $request->input('fotoCarnet');
@@ -98,8 +101,8 @@ class AlumnoController extends Controller
                 "domain_id" => $request->input('domain_id'),
                 "promocion_id" => $promocion->id,
                 "estado_id" => $request->input('estadoId'),
-                "foto_perfil" => $fotoPerfil ?? null, // Maneja null si no se envía
-                "foto_carnet" => $fotoCarnet ?? null  // Maneja null si no se envía
+                "foto_perfil" => $fotoPerfil ?? null,
+                "foto_carnet" => $fotoCarnet ?? null
             ];
 
             // Insertar el alumno en la base de datos y obtener el ID del alumno
@@ -121,23 +124,7 @@ class AlumnoController extends Controller
                 'rol_id' => 12
             ]);
 
-            // Obtener cursos de la carrera seleccionada
-            $carreraId = $request->input('carreraId');
-            $domainId = $request->input('domain_id');
-            $estadoId = $request->input('estadoId');
-            $cursos = DB::table('cursos')->where('carrera_id', $carreraId)->
-            where('estado_id', $estadoId)->get();
-
-            // Insertar los cursos en la tabla `curso_alumno`
-            foreach ($cursos as $curso) {
-                DB::table('curso_alumno')->insert([
-                    'curso_id' => $curso->id,
-                    'alumno_id' => $alumnoId,
-                    'domain_id' => $domainId,
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now()
-                ]);
-            }
+            // 🚀 EL OBSERVER SE ENCARGA AUTOMÁTICAMENTE DE LOS ENLACES CON CURSOS
 
             DB::commit();
 
@@ -146,55 +133,21 @@ class AlumnoController extends Controller
                 $this->sendWelcomeEmail($alumnoId, $request->input('email'));
             } catch (\Exception $e) {
                 // Log del error pero no fallar la creación del alumno
-                \Log::error('Error al enviar correo de bienvenida: ' . $e->getMessage());
+                Log::error('Error al enviar correo de bienvenida: ' . $e->getMessage());
             }
 
-            return response()->json(['alumno_id' => $alumnoId, 'message' => 'Alumno y usuario creados correctamente, y asignado a los cursos de la carrera.'], 201);
+            return response()->json([
+                'alumno_id' => $alumnoId,
+                'message' => 'Alumno y usuario creados correctamente. Enlaces automáticos con cursos aplicados.'
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Enviar correo de bienvenida al alumno
-     */
-    private function sendWelcomeEmail($alumnoId, $email)
-    {
-        // Obtener datos completos del alumno
-        $alumno = DB::table('alumnos')
-            ->leftJoin('ciclos', 'ciclos.id', '=', 'alumnos.ciclo_id')
-            ->leftJoin('carreras', 'carreras.id', '=', 'alumnos.carrera_id')
-            ->select(
-                'alumnos.*',
-                'ciclos.nombre as ciclo_nombre',
-                'carreras.nombres as carrera_nombre'
-            )
-            ->where('alumnos.id', $alumnoId)
-            ->first();
-
-        if (!$alumno) {
-            throw new \Exception('Alumno no encontrado');
-        }
-
-        // Generar URL de reset de contraseña
-        $passwordResetController = new \App\Http\Controllers\FrontendPasswordController();
-        $resetUrl = $passwordResetController->generateResetUrl($email);
-
-        if (!$resetUrl) {
-            throw new \Exception('No se pudo generar la URL de reset');
-        }
-
-        // Enviar correo
-        $emailService = new \App\Services\EmailService();
-        $emailService->sendWelcomeEmail($alumno, $resetUrl);
-    }
- 
-
-
     public function storeMasivos(Request $request)
-    { 
-        
+    {
         DB::beginTransaction();
         try {
             // Validar que se reciba un array de alumnos directamente
@@ -251,9 +204,8 @@ class AlumnoController extends Controller
                 }
                 $alumnoData['estadoId'] = $estado->id;
 
-                // Verificar si el alumno ya existe por código
-                $alumnoExistente = DB::table('alumnos')
-                    ->where('codigo', $alumnoData['codigo'])
+                // Verificar si el alumno ya existe por código - USAR ELOQUENT
+                $alumnoExistente = Alumno::where('codigo', $alumnoData['codigo'])
                     ->where('domain_id', $alumnoData['domain_id'])
                     ->first();
 
@@ -310,25 +262,21 @@ class AlumnoController extends Controller
                     "promocion_id" => $promocion->id,
                     "estado_id" => $alumnoData['estadoId'],
                     "foto_perfil" => $fotoPerfil,
-                    "foto_carnet" => $fotoCarnet,
-                    "updated_at" => Carbon::now()
+                    "foto_carnet" => $fotoCarnet
                 ];
 
-                $alumnoId = null;
+                $alumno = null;
                 $esActualizacion = false;
 
                 if ($alumnoExistente) {
-                    // ACTUALIZAR alumno existente
-                    DB::table('alumnos')
-                        ->where('id', $alumnoExistente->id)
-                        ->update($alumnoDataForDB);
-
-                    $alumnoId = $alumnoExistente->id;
+                    // ✅ ACTUALIZAR alumno existente - USAR ELOQUENT PARA QUE SE DISPARE EL OBSERVER
+                    $alumnoExistente->update($alumnoDataForDB);
+                    $alumno = $alumnoExistente;
                     $esActualizacion = true;
 
                     // Actualizar también el usuario correspondiente
                     DB::table('users')
-                        ->where('alumno_id', $alumnoId)
+                        ->where('alumno_id', $alumno->id)
                         ->update([
                             'name' => $alumnoData['nombres'],
                             'lastname' => $alumnoData['apellidos'] ?? ' ',
@@ -337,21 +285,13 @@ class AlumnoController extends Controller
                             'password' => Hash::make($alumnoData['contraseña']),
                             'updated_at' => Carbon::now()
                         ]);
-
-                    // Eliminar cursos existentes para reasignar
-                    DB::table('curso_alumno')
-                        ->where('alumno_id', $alumnoId)
-                        ->where('domain_id', $alumnoData['domain_id'])
-                        ->delete();
-
                 } else {
-                    // CREAR nuevo alumno
-                    $alumnoDataForDB['created_at'] = Carbon::now();
-                    $alumnoId = DB::table('alumnos')->insertGetId($alumnoDataForDB);
+                    // ✅ CREAR nuevo alumno - USAR ELOQUENT PARA QUE SE DISPARE EL OBSERVER
+                    $alumno = Alumno::create($alumnoDataForDB);
 
                     // Crear el usuario correspondiente
                     DB::table('users')->insert([
-                        'alumno_id' => $alumnoId,
+                        'alumno_id' => $alumno->id,
                         'name' => $alumnoData['nombres'],
                         'lastname' => $alumnoData['apellidos'] ?? ' ',
                         'email' => $alumnoData['email'],
@@ -366,26 +306,11 @@ class AlumnoController extends Controller
                     ]);
                 }
 
-                // Obtener cursos de la carrera seleccionada
-                $cursos = DB::table('cursos')
-                    ->where('carrera_id', $alumnoData['carreraId'])
-                    ->where('estado_id', $alumnoData['estadoId'])
-                    ->get();
-
-                // Insertar los cursos en la tabla `curso_alumno`
-                foreach ($cursos as $curso) {
-                    DB::table('curso_alumno')->insert([
-                        'curso_id' => $curso->id,
-                        'alumno_id' => $alumnoId,
-                        'domain_id' => $alumnoData['domain_id'],
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ]);
-                }
+                // 🚀 AHORA SÍ SE DISPARA EL OBSERVER AUTOMÁTICAMENTE
 
                 // Agregar a la lista correspondiente
                 $alumnoInfo = [
-                    'alumno_id' => $alumnoId,
+                    'alumno_id' => $alumno->id,
                     'email' => $alumnoData['email'],
                     'nombres' => $alumnoData['nombres'],
                     'apellidos' => $alumnoData['apellidos'] ?? ' '
@@ -406,26 +331,17 @@ class AlumnoController extends Controller
                 'total_procesados' => count($alumnosData),
                 'alumnos_nuevos' => $alumnosCreados,
                 'alumnos_actualizados' => $alumnosActualizados,
-                'message' => 'Proceso completado: ' . count($alumnosCreados) . ' alumnos creados, ' . count($alumnosActualizados) . ' alumnos actualizados'
+                'message' => 'Proceso completado: ' . count($alumnosCreados) . ' alumnos creados, ' . count($alumnosActualizados) . ' alumnos actualizados. Enlaces automáticos con cursos aplicados.'
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
-            // Log del error para debugging
-            // \Log::error('Error al crear/actualizar alumnos masivos: ' . $e->getMessage(), [
-            //     'file' => $e->getFile(),
-            //     'line' => $e->getLine(),
-            //     'trace' => $e->getTraceAsString()
-            // ]);
 
             return response()->json([
-                'message' => 'Error al procesar los alumnos2: ' . $e->getMessage(),
+                'message' => 'Error al procesar los alumnos: ' . $e->getMessage(),
                 'details' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }
     }
-
-
 
     // Actualizar un alumno existente
     public function update(Request $request, $id, $domain_id)
@@ -443,7 +359,7 @@ class AlumnoController extends Controller
             'domain_id' => 'required|integer',
             'estadoId' => 'required|integer',
             'promocion_id' => 'required|integer',
-            'estadoAlumno' => 'required|string|in:EN PROCESO,RETIRADO' // Validación del estadoAlumno
+            'estadoAlumno' => 'required|string|in:EN PROCESO,RETIRADO'
         ]);
 
         $alumno = Alumno::where('id', $id)
@@ -487,11 +403,45 @@ class AlumnoController extends Controller
             // Actualizar el alumno
             $alumno->update($updateData);
 
+            // 🚀 EL OBSERVER SE ENCARGA AUTOMÁTICAMENTE DE RE-SINCRONIZAR CURSOS SI CAMBIÓ carrera_id O estado_id
+
             return response()->json($alumno, 200);
         }
     }
 
+    /**
+     * Enviar correo de bienvenida al alumno
+     */
+    private function sendWelcomeEmail($alumnoId, $email)
+    {
+        // Obtener datos completos del alumno
+        $alumno = DB::table('alumnos')
+            ->leftJoin('ciclos', 'ciclos.id', '=', 'alumnos.ciclo_id')
+            ->leftJoin('carreras', 'carreras.id', '=', 'alumnos.carrera_id')
+            ->select(
+                'alumnos.*',
+                'ciclos.nombre as ciclo_nombre',
+                'carreras.nombres as carrera_nombre'
+            )
+            ->where('alumnos.id', $alumnoId)
+            ->first();
 
+        if (!$alumno) {
+            throw new \Exception('Alumno no encontrado');
+        }
+
+        // Generar URL de reset de contraseña
+        $passwordResetController = new \App\Http\Controllers\FrontendPasswordController();
+        $resetUrl = $passwordResetController->generateResetUrl($email);
+
+        if (!$resetUrl) {
+            throw new \Exception('No se pudo generar la URL de reset');
+        }
+
+        // Enviar correo
+        $emailService = new \App\Services\EmailService();
+        $emailService->sendWelcomeEmail($alumno, $resetUrl);
+    }
 
     // Eliminar un alumno
     public function destroy($id, $dominio)
@@ -557,88 +507,88 @@ class AlumnoController extends Controller
         return response()->json('Alumno no encontrado', 404);
     }
 
-public function paymentByStudent(Request $request, $id, $dominio)
-{
-    $available = $request->input('available', false);
+    public function paymentByStudent(Request $request, $id, $dominio)
+    {
+        $available = $request->input('available', false);
 
-    // Construir la consulta base para los pagos del alumno
-    $query = PagoAlumno::with(['pago', 'estado'])
-        ->where('alumno_id', $id)
-        ->whereHas('pago', function ($q) use ($dominio) {
-            $q->where('domain_id', $dominio);
+        // Construir la consulta base para los pagos del alumno
+        $query = PagoAlumno::with(['pago', 'estado'])
+            ->where('alumno_id', $id)
+            ->whereHas('pago', function ($q) use ($dominio) {
+                $q->where('domain_id', $dominio);
+            });
+
+        // Aplicar filtro según el valor de "available"
+        if ($available) {
+            // Solo incluir pagos pendientes (estado_id = 21)
+            $query->where('estado_id', 21);
+        }
+
+        // Ejecutar la consulta
+        $pagosAlumno = $query->get();
+
+        // Formatear la respuesta
+        $pagos = $pagosAlumno->map(function ($pagoAlumno) {
+            return [
+                'pago_alumno_id' => $pagoAlumno->pago->id,
+                'nombre' => $pagoAlumno->pago->nombre ?? 'Sin nombre',
+                'monto' => $pagoAlumno->pago->monto ?? 0,
+                'fecha_vencimiento' => $pagoAlumno->pago->fecha_vencimiento ?? null,
+                'estado' => $pagoAlumno->estado->nombre ?? 'Desconocido',
+                'estado_id' => $pagoAlumno->estado->id
+            ];
         });
 
-    // Aplicar filtro según el valor de "available"
-    if ($available) {
-        // Solo incluir pagos pendientes (estado_id = 21)
-        $query->where('estado_id', 21);
-    }
-
-    // Ejecutar la consulta
-    $pagosAlumno = $query->get();
-
-    // Formatear la respuesta
-    $pagos = $pagosAlumno->map(function ($pagoAlumno) {
-        return [
-            'pago_alumno_id' => $pagoAlumno->pago->id,
-            'nombre' => $pagoAlumno->pago->nombre ?? 'Sin nombre',
-            'monto' => $pagoAlumno->pago->monto ?? 0,
-            'fecha_vencimiento' => $pagoAlumno->pago->fecha_vencimiento ?? null,
-            'estado' => $pagoAlumno->estado->nombre ?? 'Desconocido',
-            'estado_id' => $pagoAlumno->estado->id
-        ];
-    });
-
-    // Retornar la respuesta en formato JSON
-    return response()->json([
-        'alumno_id' => $id,
-        'pagos' => $pagos,
-    ]);
-}
-
-public function subirComprobante(Request $request)
-{
-
-    $validator = Validator::make(
-        $request->all(),
-        [
-            'pago_id' => 'required|integer',
-            'alumno_id' => 'required|integer',
-            'domain_id' => 'required|integer',
-            'voucher_pago' => 'required|file|mimes:jpg,jpeg,png',
-        ]
-    );
-
-    if ($validator->fails()) {
+        // Retornar la respuesta en formato JSON
         return response()->json([
-            'responseCode' => 422,
-            'message' => 'Datos inválidos.',
-            'errors' => $validator->errors(),
-        ], 422);
+            'alumno_id' => $id,
+            'pagos' => $pagos,
+        ]);
     }
 
-    $pagoAlumno = PagoAlumno::where('pago_id', $request->pago_id)
-        ->where('alumno_id', $request->alumno_id)
-        ->first();
+    public function subirComprobante(Request $request)
+    {
 
-    if (!$pagoAlumno) {
-        return response()->json(['error' => 'Pago no encontrado'], 404);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'pago_id' => 'required|integer',
+                'alumno_id' => 'required|integer',
+                'domain_id' => 'required|integer',
+                'voucher_pago' => 'required|file|mimes:jpg,jpeg,png',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'responseCode' => 422,
+                'message' => 'Datos inválidos.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $pagoAlumno = PagoAlumno::where('pago_id', $request->pago_id)
+            ->where('alumno_id', $request->alumno_id)
+            ->first();
+
+        if (!$pagoAlumno) {
+            return response()->json(['error' => 'Pago no encontrado'], 404);
+        }
+
+        if (!empty($pagoAlumno->voucher_pago)) {
+            return response()->json([
+                'responseCode' => 409,
+                'message' => 'El voucher ya fue subido anteriormente.',
+            ], 409);
+        }
+
+        $file = $request->file('voucher_pago');
+        $base64Image = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file));
+        // Guardar el comprobante y cambiar el estado a '2' (validado)
+        $pagoAlumno->voucher_pago = $base64Image;
+        $pagoAlumno->estado_id = 2; // Cambiar estado a 'validado'
+        $pagoAlumno->save();
+
+        return response()->json(['message' => 'Comprobante subido exitosamente'], 200);
     }
-
-    if (!empty($pagoAlumno->voucher_pago)) {
-        return response()->json([
-            'responseCode' => 409,
-            'message' => 'El voucher ya fue subido anteriormente.',
-        ], 409);
-    }
-
-    $file = $request->file('voucher_pago');
-    $base64Image = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file));
-    // Guardar el comprobante y cambiar el estado a '2' (validado)
-    $pagoAlumno->voucher_pago = $base64Image;
-    $pagoAlumno->estado_id = 2; // Cambiar estado a 'validado'
-    $pagoAlumno->save();
-
-    return response()->json(['message' => 'Comprobante subido exitosamente'], 200);
-}
 }
